@@ -1,0 +1,13 @@
+الموقع شغّال الحين. أكمل البناء:
+
+1. اربط الموقع بـ Supabase:
+   - أنشئ جدول products في Supabase (id, name, name_ar, price, image_url, category, is_active, sort_order)
+   - اجلب المنتجات من Supabase وعرّضها في قسم المناسبات والبوكسات
+
+2. أكمل صفحة الأدمن /dashboard:
+   - رفع صور لـ Supabase Storage
+   - إضافة وحذف منتجات
+   - تغيير الأسعار
+   - إخفاء وإظهار منتجات
+
+3. استخدم shadcn/ui للـ dashboard components
