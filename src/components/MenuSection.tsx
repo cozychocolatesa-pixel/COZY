@@ -47,76 +47,51 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
         <div className="w-20 h-px bg-gradient-to-r from-transparent via-gold-500/60 to-transparent mx-auto mt-6" />
       </div>
 
-      <div
-        className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
-        style={{ perspective: '1000px' }}
-      >
+      <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-6 md:gap-10">
         {products.map((product) => (
           <div
             key={product.id}
             onClick={() => setSelected(product)}
-            className="product-card group cursor-pointer relative overflow-hidden rounded-xl shadow-xl"
-            style={{
-              border: '1px solid rgba(212,175,55,0.18)',
-              transition: 'transform 0.4s cubic-bezier(0.23,1,0.32,1), box-shadow 0.4s ease',
-              transformStyle: 'preserve-3d',
-            }}
-            onMouseEnter={e => {
-              const el = e.currentTarget as HTMLDivElement
-              el.style.transform = 'perspective(800px) translateZ(25px) scale(1.03)'
-              el.style.boxShadow = '0 40px 80px rgba(0,0,0,0.6), 0 0 40px rgba(212,175,55,0.2)'
-              el.style.borderColor = 'rgba(212,175,55,0.6)'
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget as HTMLDivElement
-              el.style.transform = 'perspective(800px) translateZ(0) scale(1)'
-              el.style.boxShadow = ''
-              el.style.borderColor = 'rgba(212,175,55,0.18)'
-            }}
+            className="product-card group cursor-pointer flex flex-col items-center gap-3"
           >
-            {/* Full image */}
-            <div className="relative aspect-square overflow-hidden bg-sage-900">
+            {/* Circle image */}
+            <div
+              className="relative overflow-hidden rounded-full shadow-lg w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36"
+              style={{
+                border: '2px solid rgba(212,175,55,0.3)',
+                transition: 'transform 0.35s cubic-bezier(0.23,1,0.32,1), box-shadow 0.35s ease, border-color 0.35s ease',
+              }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLDivElement
+                el.style.transform = 'scale(1.08)'
+                el.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5), 0 0 20px rgba(212,175,55,0.3)'
+                el.style.borderColor = 'rgba(212,175,55,0.8)'
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLDivElement
+                el.style.transform = 'scale(1)'
+                el.style.boxShadow = ''
+                el.style.borderColor = 'rgba(212,175,55,0.3)'
+              }}
+            >
               {product.image_url ? (
                 <Image
                   src={product.image_url}
                   alt={product.name_ar}
                   fill
-                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-108"
-                  style={{ transitionTimingFunction: 'cubic-bezier(0.25,0.46,0.45,0.94)' }}
+                  className="object-cover transition-transform duration-500 group-hover:scale-110"
                 />
               ) : (
                 <div className="w-full h-full bg-sage-800 flex items-center justify-center">
-                  <span className="text-6xl opacity-15">🍫</span>
+                  <span className="text-3xl opacity-20">🍫</span>
                 </div>
               )}
+            </div>
 
-              {/* Permanent bottom gradient */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-
-              {/* Static info - always visible at bottom */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-0 transition-transform duration-400">
-                <h3 className="font-bold text-white text-base leading-tight drop-shadow-sm" dir="rtl">{product.name_ar}</h3>
-                <div className="flex items-center justify-between mt-1" dir="rtl">
-                  <span className="text-gold-300 font-bold text-lg drop-shadow-sm">
-                    {product.price} <SARSymbol className="opacity-80" />
-                  </span>
-                </div>
-              </div>
-
-              {/* Hover slide-up panel */}
-              <div
-                className="absolute bottom-0 left-0 right-0 translate-y-full group-hover:translate-y-0 transition-transform duration-400 ease-out p-4 flex flex-col gap-2"
-                style={{ background: 'linear-gradient(to top, rgba(15,8,2,0.97) 0%, rgba(15,8,2,0.9) 100%)' }}
-              >
-                <h3 className="font-bold text-white text-base" dir="rtl">{product.name_ar}</h3>
-                {product.description && (
-                  <p className="text-sage-300 text-xs leading-relaxed line-clamp-2" dir="rtl">{product.description}</p>
-                )}
-                <div className="flex items-center justify-between mt-1" dir="rtl">
-                  <span className="text-gold-300 font-bold text-lg">{product.price} <SARSymbol /></span>
-                  <span className="text-xs text-gold-400/80 tracking-widest border border-gold-500/30 px-3 py-1 rounded-full">تفاصيل</span>
-                </div>
-              </div>
+            {/* Name + Price below circle */}
+            <div className="text-center transition-all duration-300 group-hover:scale-110" dir="rtl">
+              <p className="text-white/70 text-sm font-semibold leading-tight line-clamp-2 transition-colors duration-300 group-hover:text-white">{product.name_ar}</p>
+              <p className="text-gold-300/70 text-sm mt-1 font-bold transition-colors duration-300 group-hover:text-gold-200">{product.price} <SARSymbol className="opacity-80" /></p>
             </div>
           </div>
         ))}
@@ -154,7 +129,7 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
             </button>
 
             {/* Image — 60% */}
-            <div className="relative w-full md:w-[60%] aspect-square md:aspect-auto min-h-[260px] md:min-h-[420px] flex-shrink-0">
+            <div className="relative w-full md:w-[60%] aspect-square md:aspect-auto min-h-[220px] md:min-h-[420px] flex-shrink-0">
               {selected.image_url ? (
                 <Image
                   src={selected.image_url}
@@ -168,12 +143,11 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
                   <span className="text-8xl opacity-10">🍫</span>
                 </div>
               )}
-              {/* fade into details panel */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#120a04] hidden md:block" />
             </div>
 
-            {/* Details — 40% */}
-            <div className="flex-1 flex flex-col justify-center gap-4 p-7 md:p-9" dir="rtl">
+            {/* Details — 40% — scrollable on mobile */}
+            <div className="flex-1 flex flex-col justify-center gap-4 p-6 md:p-9 overflow-y-auto" dir="rtl">
               {/* Category badge */}
               <span className="text-xs text-gold-400/70 tracking-[0.2em] border border-gold-500/20 px-3 py-1 rounded-full w-fit">
                 {selected.category === 'occasions' ? 'مناسبات' : 'بوكسات'}
