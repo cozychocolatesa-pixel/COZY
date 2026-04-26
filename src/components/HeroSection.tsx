@@ -72,8 +72,7 @@ export default function HeroSection() {
         disableRemotePlayback
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
       >
-        <source src="/hero-video.mov" type="video/quicktime" />
-        <source src="/hero-video.mov" type="video/mp4" />
+        <source src="/hero-video-compressed.mp4" type="video/mp4" />
       </video>
 
       {/* Overlay */}
