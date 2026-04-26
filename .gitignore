@@ -37,3 +37,5 @@ next-env.d.ts
 
 public/hero-video.mov
 public/*.mov
+
+.vercel
