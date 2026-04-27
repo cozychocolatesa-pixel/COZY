@@ -240,7 +240,7 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
             </button>
 
             {/* Image — 60% */}
-            <div className="relative w-full md:w-[60%] aspect-square md:aspect-auto min-h-[220px] md:min-h-[420px] flex-shrink-0">
+            <div className="relative w-full md:w-[60%] aspect-square md:aspect-auto min-h-[180px] max-h-[40vh] md:max-h-none md:min-h-[420px] flex-shrink-0">
               {selected.image_url ? (
                 <Image
                   src={selected.image_url}
@@ -258,7 +258,7 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
             </div>
 
             {/* Details — 40% — scrollable on mobile */}
-            <div className="flex-1 flex flex-col justify-center gap-3 p-5 md:p-7" dir="rtl">
+            <div className="flex-1 min-h-0 flex flex-col gap-3 p-5 md:p-7 overflow-y-auto" dir="rtl">
               {/* Category badge */}
               <span className="text-xs text-gold-400/70 tracking-[0.2em] border border-gold-500/20 px-3 py-1 rounded-full w-fit">
                 {selected.category === 'occasions' ? 'مناسبات' : 'بوكسات'}
