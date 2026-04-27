@@ -386,10 +386,22 @@ export default function Dashboard() {
                   <div key={sub.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[#779599]/5 gap-2">
                     {/* Icon preview + upload */}
                     <div className="relative flex-shrink-0 group">
-                      {sub.icon_url
-                        ? <img src={sub.icon_url} alt={sub.name_ar} className="w-9 h-9 rounded-lg object-cover border border-[#779599]/20" />
-                        : <div className="w-9 h-9 rounded-lg bg-[#779599]/10 border border-dashed border-[#779599]/30 flex items-center justify-center text-[#779599]/40 text-xs">🖼</div>
-                      }
+                      {(() => {
+                        const parentName = categories.find(c => c.id === sub.parent_id)?.name
+                        const folder = parentName === 'occasions' ? 'munasabat' : 'boxes'
+                        const localMap: Record<string,string> = {
+                          chocolate:'chocolate.png', petit_four:'petit-four.png', salties:'salties.png',
+                          hala_qahwa:'hala-qahwa.png', packages:'package.png', rental_trays:'rental-trays.png',
+                          special_offers:'special-offers.png', chocolate_bites:'chocolate-bites.png',
+                          biscuits:'biscuits.png', pudding:'pudding.png', choices_set:'choices-set.png',
+                          trays:'trays.png', coffee:'coffee.png',
+                        }
+                        const fallback = localMap[sub.name] ? `/icons/${folder}/${localMap[sub.name]}` : null
+                        const iconSrc = sub.icon_url || fallback
+                        return iconSrc
+                          ? <img src={iconSrc} alt={sub.name_ar} className="w-9 h-9 rounded-lg object-cover border border-[#779599]/20" />
+                          : <div className="w-9 h-9 rounded-lg bg-[#779599]/10 border border-dashed border-[#779599]/30 flex items-center justify-center text-[#779599]/40 text-xs">🖼</div>
+                      })()}
                       <label className="absolute inset-0 cursor-pointer rounded-lg opacity-0 group-hover:opacity-100 bg-black/40 flex items-center justify-center transition-opacity">
                         <Upload size={14} className="text-white" />
                         <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={async e => {
