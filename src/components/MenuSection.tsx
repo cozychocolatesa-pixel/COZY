@@ -82,7 +82,8 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
             <div className="flex flex-wrap justify-center gap-3">
               {allTabs.map(tab => {
                 const isActive = activeTab === tab.id
-                const src = tab.name !== 'all' && iconFiles[tab.name] ? `/icons/${iconFiles[tab.name]}` : null
+                const dbIcon = 'icon_url' in tab ? tab.icon_url : null
+                const src = tab.name === 'all' ? null : (dbIcon || (iconFiles[tab.name] ? `/icons/${iconFiles[tab.name]}` : null))
                 return (
                   <button
                     key={tab.id}

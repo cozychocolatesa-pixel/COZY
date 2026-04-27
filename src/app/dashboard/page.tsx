@@ -347,7 +347,10 @@ export default function Dashboard() {
 
         {/* Category Management Panel */}
         <div className="rounded-2xl p-6 mb-6" style={{background:'rgba(255,255,255,0.88)', backdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.5)'}}>
-          <h2 className="text-lg font-bold text-[#3D2B1F] mb-4">📂 إدارة الأقسام</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-[#3D2B1F]">📂 إدارة الأقسام</h2>
+            <span className="text-xs text-[#779599] bg-[#779599]/10 px-2 py-1 rounded-lg">🖼 أيقونة الفرع: PNG · 200×200 بكسل · حجم أقصى 500 كيلوبايت</span>
+          </div>
           {categories.filter(c => c.parent_id === null).map(main => (
             <div key={main.id} className="mb-4 border border-[#779599]/20 rounded-xl overflow-hidden">
               {/* Main category row */}
@@ -380,7 +383,24 @@ export default function Dashboard() {
               {/* Subcategories */}
               <div className="px-4 py-2 space-y-1">
                 {categories.filter(c => c.parent_id === main.id).map(sub => (
-                  <div key={sub.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-[#779599]/5">
+                  <div key={sub.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[#779599]/5 gap-2">
+                    {/* Icon preview + upload */}
+                    <div className="relative flex-shrink-0 group">
+                      {sub.icon_url
+                        ? <img src={sub.icon_url} alt={sub.name_ar} className="w-9 h-9 rounded-lg object-cover border border-[#779599]/20" />
+                        : <div className="w-9 h-9 rounded-lg bg-[#779599]/10 border border-dashed border-[#779599]/30 flex items-center justify-center text-[#779599]/40 text-xs">🖼</div>
+                      }
+                      <label className="absolute inset-0 cursor-pointer rounded-lg opacity-0 group-hover:opacity-100 bg-black/40 flex items-center justify-center transition-opacity">
+                        <Upload size={14} className="text-white" />
+                        <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={async e => {
+                          const file = e.target.files?.[0]; if (!file) return
+                          const fd = new FormData(); fd.append('file', file)
+                          const res = await fetch('/api/upload-icon', { method: 'POST', body: fd })
+                          const json = await res.json()
+                          if (json.url) { await updateCategory(sub.id, { icon_url: json.url }); fetchCategories() }
+                        }} />
+                      </label>
+                    </div>
                     {editingCat?.id === sub.id ? (
                       <div className="flex gap-2 flex-1">
                         <input value={editingCat.name_ar} onChange={e => setEditingCat(c => c ? {...c, name_ar: e.target.value} : c)}
@@ -391,7 +411,7 @@ export default function Dashboard() {
                         <button onClick={() => setEditingCat(null)} className="px-3 py-1 border border-[#779599]/30 text-[#3D2B1F]/60 rounded-lg text-xs">إلغاء</button>
                       </div>
                     ) : (
-                      <span className="text-[#3D2B1F]/80 text-sm">— {sub.name_ar} <span className="text-[#3D2B1F]/30 text-xs">({sub.name})</span></span>
+                      <span className="text-[#3D2B1F]/80 text-sm flex-1">— {sub.name_ar} <span className="text-[#3D2B1F]/30 text-xs">({sub.name})</span></span>
                     )}
                     <div className="flex gap-1 items-center">
                       <button onClick={() => updateCategory(sub.id, {is_active: !sub.is_active})}
