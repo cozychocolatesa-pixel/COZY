@@ -59,7 +59,7 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
     const isLiking = !liked.has(id)
     setLiked(prev => {
       const next = new Set(prev)
-      isLiking ? next.add(id) : next.delete(id)
+      if (isLiking) { next.add(id) } else { next.delete(id) }
       localStorage.setItem('cozy_likes', JSON.stringify(Array.from(next)))
       return next
     })

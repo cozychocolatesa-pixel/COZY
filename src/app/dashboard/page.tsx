@@ -23,7 +23,7 @@ export default function Dashboard() {
   const [savingSettings, setSavingSettings] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set())
-  const toggleCat = (id: string) => setCollapsedCats(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleCat = (id: string) => setCollapsedCats(prev => { const n = new Set(prev); if (n.has(id)) { n.delete(id) } else { n.add(id) }; return n })
   const [dragCatIdx, setDragCatIdx] = useState<number | null>(null)
   const [dragParentId, setDragParentId] = useState<string | null>(null)
   const [productFilter, setProductFilter] = useState<Record<string, string>>({ occasions: 'all', boxes: 'all' })
