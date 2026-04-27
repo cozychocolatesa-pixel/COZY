@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Product } from '@/lib/supabase'
+import { Product, Category } from '@/lib/supabase'
 import { Plus, Trash2, Eye, EyeOff, LogIn, Upload, GripVertical, Pencil, X } from 'lucide-react'
 import Image from 'next/image'
 
@@ -21,6 +21,10 @@ export default function Dashboard() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [settings, setSettings] = useState({ whatsapp: '', instagram_occasions: '', instagram_boxes: '' })
   const [savingSettings, setSavingSettings] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [showCatForm, setShowCatForm] = useState<null | { parentId: string | null }>(null)
+  const [newCat, setNewCat] = useState({ name: '', name_ar: '' })
+  const [editingCat, setEditingCat] = useState<Category | null>(null)
   const [newProduct, setNewProduct] = useState({
     name: '',
     name_ar: '',
@@ -30,6 +34,7 @@ export default function Dashboard() {
     description: '',
     is_active: true,
     sort_order: 0,
+    category_id: null as string | null,
   })
 
   useEffect(() => {
@@ -38,9 +43,43 @@ export default function Dashboard() {
         setIsAuth(true)
         fetchProducts()
         fetchSettings()
+        fetchCategories()
       }
     })
   }, [])
+
+  const fetchCategories = async () => {
+    const res = await fetch('/api/categories')
+    const data = await res.json()
+    setCategories(data)
+  }
+
+  const addCategory = async (parentId: string | null) => {
+    if (!newCat.name_ar) return
+    await fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newCat.name || newCat.name_ar, name_ar: newCat.name_ar, parent_id: parentId, sort_order: categories.filter(c => c.parent_id === parentId).length }),
+    })
+    setNewCat({ name: '', name_ar: '' })
+    setShowCatForm(null)
+    fetchCategories()
+  }
+
+  const updateCategory = async (id: string, updates: Partial<Category>) => {
+    await fetch('/api/categories', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...updates }),
+    })
+    setEditingCat(null)
+    fetchCategories()
+  }
+
+  const deleteCategory = async (id: string) => {
+    await fetch(`/api/categories?id=${id}`, { method: 'DELETE' })
+    fetchCategories()
+  }
 
   const fetchSettings = async () => {
     const res = await fetch('/api/settings')
@@ -146,7 +185,7 @@ export default function Dashboard() {
     })
     if (res.ok) {
       setShowForm(null)
-      setNewProduct({ name: '', name_ar: '', price: 0, category: 'occasions', image_url: '', description: '', is_active: true, sort_order: 0 })
+      setNewProduct({ name: '', name_ar: '', price: 0, category: 'occasions', image_url: '', description: '', is_active: true, sort_order: 0, category_id: null })
       fetchProducts()
     }
     setLoading(false)
@@ -306,6 +345,92 @@ export default function Dashboard() {
           </button>
         </div>
 
+        {/* Category Management Panel */}
+        <div className="rounded-2xl p-6 mb-6" style={{background:'rgba(255,255,255,0.88)', backdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.5)'}}>
+          <h2 className="text-lg font-bold text-[#3D2B1F] mb-4">📂 إدارة الأقسام</h2>
+          {categories.filter(c => c.parent_id === null).map(main => (
+            <div key={main.id} className="mb-4 border border-[#779599]/20 rounded-xl overflow-hidden">
+              {/* Main category row */}
+              <div className="flex items-center justify-between px-4 py-3 bg-[#779599]/10">
+                {editingCat?.id === main.id ? (
+                  <div className="flex gap-2 flex-1">
+                    <input value={editingCat.name_ar} onChange={e => setEditingCat(c => c ? {...c, name_ar: e.target.value} : c)}
+                      className="px-2 py-1 border border-[#779599]/40 rounded-lg text-sm text-[#3D2B1F] focus:outline-none w-28" placeholder="عربي" />
+                    <input value={editingCat.name} onChange={e => setEditingCat(c => c ? {...c, name: e.target.value} : c)}
+                      className="px-2 py-1 border border-[#779599]/40 rounded-lg text-sm text-[#3D2B1F] focus:outline-none w-28" placeholder="English" dir="ltr" />
+                    <button onClick={() => updateCategory(main.id, {name: editingCat.name, name_ar: editingCat.name_ar})} className="px-3 py-1 bg-[#D4AF37] text-[#3D2B1F] rounded-lg text-xs font-bold">حفظ</button>
+                    <button onClick={() => setEditingCat(null)} className="px-3 py-1 border border-[#779599]/30 text-[#3D2B1F]/60 rounded-lg text-xs">إلغاء</button>
+                  </div>
+                ) : (
+                  <span className="font-bold text-[#3D2B1F]">{main.name_ar} <span className="text-[#3D2B1F]/40 text-xs font-normal">({main.name})</span></span>
+                )}
+                <div className="flex gap-2 items-center mr-2">
+                  <button onClick={() => updateCategory(main.id, {is_active: !main.is_active})}
+                    className={`text-xs px-2 py-1 rounded-lg ${main.is_active ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
+                    {main.is_active ? 'ظاهر' : 'مخفي'}
+                  </button>
+                  <button onClick={() => setEditingCat(main)} className="p-1 text-[#779599] hover:bg-[#779599]/10 rounded"><Pencil size={14} /></button>
+                  <button onClick={() => deleteCategory(main.id)} className="p-1 text-red-400 hover:bg-red-50 rounded"><Trash2 size={14} /></button>
+                  <button onClick={() => { setShowCatForm({parentId: main.id}); setNewCat({name:'',name_ar:''}) }}
+                    className="flex items-center gap-1 px-2 py-1 bg-[#D4AF37]/20 text-[#3D2B1F] rounded-lg text-xs font-bold">
+                    <Plus size={12} /> فرعي
+                  </button>
+                </div>
+              </div>
+              {/* Subcategories */}
+              <div className="px-4 py-2 space-y-1">
+                {categories.filter(c => c.parent_id === main.id).map(sub => (
+                  <div key={sub.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-[#779599]/5">
+                    {editingCat?.id === sub.id ? (
+                      <div className="flex gap-2 flex-1">
+                        <input value={editingCat.name_ar} onChange={e => setEditingCat(c => c ? {...c, name_ar: e.target.value} : c)}
+                          className="px-2 py-1 border border-[#779599]/40 rounded-lg text-sm text-[#3D2B1F] focus:outline-none w-28" placeholder="عربي" />
+                        <input value={editingCat.name} onChange={e => setEditingCat(c => c ? {...c, name: e.target.value} : c)}
+                          className="px-2 py-1 border border-[#779599]/40 rounded-lg text-sm text-[#3D2B1F] focus:outline-none w-28" placeholder="English" dir="ltr" />
+                        <button onClick={() => updateCategory(sub.id, {name: editingCat.name, name_ar: editingCat.name_ar})} className="px-3 py-1 bg-[#D4AF37] text-[#3D2B1F] rounded-lg text-xs font-bold">حفظ</button>
+                        <button onClick={() => setEditingCat(null)} className="px-3 py-1 border border-[#779599]/30 text-[#3D2B1F]/60 rounded-lg text-xs">إلغاء</button>
+                      </div>
+                    ) : (
+                      <span className="text-[#3D2B1F]/80 text-sm">— {sub.name_ar} <span className="text-[#3D2B1F]/30 text-xs">({sub.name})</span></span>
+                    )}
+                    <div className="flex gap-1 items-center">
+                      <button onClick={() => updateCategory(sub.id, {is_active: !sub.is_active})}
+                        className={`text-xs px-2 py-0.5 rounded ${sub.is_active ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
+                        {sub.is_active ? 'ظاهر' : 'مخفي'}
+                      </button>
+                      <button onClick={() => setEditingCat(sub)} className="p-1 text-[#779599] hover:bg-[#779599]/10 rounded"><Pencil size={13} /></button>
+                      <button onClick={() => deleteCategory(sub.id)} className="p-1 text-red-400 hover:bg-red-50 rounded"><Trash2 size={13} /></button>
+                    </div>
+                  </div>
+                ))}
+                {/* Add subcategory form */}
+                {showCatForm?.parentId === main.id && (
+                  <div className="flex gap-2 pt-1">
+                    <input value={newCat.name_ar} onChange={e => setNewCat(c => ({...c, name_ar: e.target.value}))} placeholder="اسم عربي" className="px-2 py-1 border border-[#779599]/40 rounded-lg text-sm text-[#3D2B1F] focus:outline-none w-28" />
+                    <input value={newCat.name} onChange={e => setNewCat(c => ({...c, name: e.target.value}))} placeholder="English" dir="ltr" className="px-2 py-1 border border-[#779599]/40 rounded-lg text-sm text-[#3D2B1F] focus:outline-none w-28" />
+                    <button onClick={() => addCategory(main.id)} className="px-3 py-1 bg-[#D4AF37] text-[#3D2B1F] rounded-lg text-xs font-bold">إضافة</button>
+                    <button onClick={() => setShowCatForm(null)} className="px-3 py-1 border border-[#779599]/30 text-[#3D2B1F]/60 rounded-lg text-xs">إلغاء</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          {/* Add main category */}
+          {showCatForm?.parentId === null ? (
+            <div className="flex gap-2 mt-2">
+              <input value={newCat.name_ar} onChange={e => setNewCat(c => ({...c, name_ar: e.target.value}))} placeholder="اسم عربي" className="px-3 py-2 border border-[#779599]/40 rounded-xl text-sm text-[#3D2B1F] focus:outline-none" />
+              <input value={newCat.name} onChange={e => setNewCat(c => ({...c, name: e.target.value}))} placeholder="English" dir="ltr" className="px-3 py-2 border border-[#779599]/40 rounded-xl text-sm text-[#3D2B1F] focus:outline-none" />
+              <button onClick={() => addCategory(null)} className="px-4 py-2 bg-[#D4AF37] text-[#3D2B1F] rounded-xl text-sm font-bold">إضافة</button>
+              <button onClick={() => setShowCatForm(null)} className="px-4 py-2 border border-[#779599]/30 text-[#3D2B1F]/60 rounded-xl text-sm">إلغاء</button>
+            </div>
+          ) : (
+            <button onClick={() => { setShowCatForm({parentId: null}); setNewCat({name:'',name_ar:''}) }}
+              className="flex items-center gap-1 mt-2 px-4 py-2 border border-dashed border-[#779599]/40 text-[#3D2B1F]/60 rounded-xl text-sm hover:border-[#779599] hover:text-[#3D2B1F] transition-colors">
+              <Plus size={14} /> قسم رئيسي جديد
+            </button>
+          )}
+        </div>
+
         {/* Products Table */}
         {(['occasions', 'boxes'] as const).map(cat => {
           const catProducts = products.filter(p => p.category === cat)
@@ -337,6 +462,13 @@ export default function Dashboard() {
                     <Upload size={16} />{newProduct.image_url ? 'تم الرفع ✓' : 'رفع صورة'}
                     <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                   </label>
+                  <select value={newProduct.category_id || ''} onChange={e => setNewProduct(p => ({...p, category_id: e.target.value || null}))}
+                    className="px-3 py-2 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] focus:border-[#779599] focus:outline-none text-sm">
+                    <option value="">— بدون قسم فرعي —</option>
+                    {categories.filter(c => c.parent_id !== null && categories.find(m => m.id === c.parent_id)?.name === cat).map(sub => (
+                      <option key={sub.id} value={sub.id}>{sub.name_ar}</option>
+                    ))}
+                  </select>
                   <textarea placeholder="المكونات / الوصف (اختياري)" value={newProduct.description}
                     onChange={e => setNewProduct(p => ({...p, description: e.target.value}))}
                     rows={2} className="col-span-full px-3 py-2 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] placeholder:text-[#3D2B1F]/40 focus:border-[#779599] focus:outline-none resize-none text-sm" />
@@ -501,11 +633,21 @@ export default function Dashboard() {
               />
               <select
                 value={editingProduct.category}
-                onChange={(e) => setEditingProduct(p => p ? {...p, category: e.target.value as 'occasions'|'boxes'} : p)}
+                onChange={(e) => setEditingProduct(p => p ? {...p, category: e.target.value as 'occasions'|'boxes', category_id: null} : p)}
                 className="px-4 py-3 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] focus:border-[#779599] focus:outline-none"
               >
                 <option value="occasions">مناسبات</option>
                 <option value="boxes">بوكسات</option>
+              </select>
+              <select
+                value={editingProduct.category_id || ''}
+                onChange={(e) => setEditingProduct(p => p ? {...p, category_id: e.target.value || null} : p)}
+                className="px-4 py-3 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] focus:border-[#779599] focus:outline-none"
+              >
+                <option value="">— بدون قسم فرعي —</option>
+                {categories.filter(c => c.parent_id !== null && categories.find(m => m.id === c.parent_id)?.name === editingProduct.category).map(sub => (
+                  <option key={sub.id} value={sub.id}>{sub.name_ar}</option>
+                ))}
               </select>
               <textarea
                 placeholder="المكونات / الوصف (اختياري)"

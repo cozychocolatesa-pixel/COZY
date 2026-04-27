@@ -6,7 +6,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Image from 'next/image'
 import { X } from 'lucide-react'
 import SARSymbol from './SARSymbol'
-import { Product } from '@/lib/supabase'
+import { Product, Category } from '@/lib/supabase'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -21,6 +21,12 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
   const sectionRef = useRef<HTMLElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
   const [selected, setSelected] = useState<Product | null>(null)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [activeTab, setActiveTab] = useState<string>('all')
+
+  useEffect(() => {
+    fetch('/api/categories').then(r => r.json()).then(data => setCategories(data))
+  }, [])
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -30,14 +36,15 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
       })
       const cards = sectionRef.current?.querySelectorAll('.product-card')
       if (cards) {
-        gsap.to(cards, {
-          scrollTrigger: { trigger: sectionRef.current, start: 'top 65%', toggleActions: 'play none none reverse' },
-          opacity: 1, y: 0, scale: 1, duration: 0.7, stagger: 0.12, ease: 'power3.out',
-        })
+        gsap.fromTo(cards,
+          { opacity: 0, y: 40, scale: 0.95 },
+          { scrollTrigger: { trigger: sectionRef.current, start: 'top 65%', toggleActions: 'play none none reverse' },
+            opacity: 1, y: 0, scale: 1, duration: 0.7, stagger: 0.08, ease: 'power3.out' }
+        )
       }
     }, sectionRef)
     return () => ctx.revert()
-  }, [products.length])
+  }, [products.length, activeTab])
 
   return (
     <section id={id} ref={sectionRef} className="py-24 px-4 md:px-8 overflow-hidden">
@@ -47,8 +54,61 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
         <div className="w-20 h-px bg-gradient-to-r from-transparent via-gold-500/60 to-transparent mx-auto mt-6" />
       </div>
 
+      {/* Subcategory Tabs */}
+      {(() => {
+        const mainCat = categories.find(c => c.parent_id === null && c.name === id)
+        const rawSubs = mainCat ? categories.filter(c => c.parent_id === mainCat.id && c.is_active) : []
+        const seen = new Set<string>(); const subs = rawSubs.filter(s => { if (seen.has(s.name)) return false; seen.add(s.name); return true })
+        if (subs.length === 0) return null
+        const folder = id === 'occasions' ? 'munasabat' : 'boxes'
+        const iconFiles: Record<string, string> = {
+          chocolate:       `${folder}/chocolate.png`,
+          petit_four:      'munasabat/petit-four.png',
+          salties:         'munasabat/salties.png',
+          hala_qahwa:      `${folder}/hala-qahwa.png`,
+          packages:        'munasabat/package.png',
+          rental_trays:    'munasabat/rental-trays.png',
+          special_offers:  'boxes/special-offers.png',
+          chocolate_bites: 'boxes/chocolate-bites.png',
+          biscuits:        'boxes/biscuits.png',
+          pudding:         'boxes/pudding.png',
+          choices_set:     'boxes/choices-set.png',
+          trays:           'boxes/trays.png',
+          coffee:          'boxes/coffee.png',
+        }
+        const allTabs = [{id:'all', name_ar:'الكل', name:'all'}, ...subs]
+        return (
+          <div className="mb-10 px-4">
+            <div className="flex flex-wrap justify-center gap-3">
+              {allTabs.map(tab => {
+                const isActive = activeTab === tab.id
+                const src = tab.name !== 'all' && iconFiles[tab.name] ? `/icons/${iconFiles[tab.name]}` : null
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex flex-col items-center gap-2 w-[90px] py-3 rounded-2xl font-medium transition-all duration-300 ${
+                      isActive ? 'text-[#1a0f00] scale-105' : 'text-brand-cream/60 hover:text-brand-cream/90 hover:scale-105'
+                    }`}
+                    style={isActive
+                      ? {background:'linear-gradient(145deg,#D4AF37,#B8902E)', boxShadow:'0 6px 20px rgba(212,175,55,0.45)'}
+                      : {background:'rgba(255,255,255,0.04)', border:'1px solid rgba(212,175,55,0.15)'}}
+                  >
+                    {src
+                      ? <img src={src} alt={tab.name_ar} width={56} height={56} className="rounded-xl object-cover" />
+                      : <span className="text-3xl">✨</span>
+                    }
+                    <span className="text-xs leading-snug text-center w-full px-1">{tab.name_ar}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
+
       <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-6 md:gap-10">
-        {products.map((product) => (
+        {products.filter(p => activeTab === 'all' || p.category_id === activeTab).map((product) => (
           <div
             key={product.id}
             onClick={() => setSelected(product)}
@@ -82,9 +142,7 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
                   className="object-cover transition-transform duration-500 group-hover:scale-110"
                 />
               ) : (
-                <div className="w-full h-full bg-sage-800 flex items-center justify-center">
-                  <span className="text-3xl opacity-20">🍫</span>
-                </div>
+                <div className="w-full h-full" style={{background:'linear-gradient(135deg, #2a1a0e 0%, #3d2b1f 50%, #1a0f06 100%)'}} />
               )}
             </div>
 

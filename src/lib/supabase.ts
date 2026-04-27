@@ -1,5 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 
+export type Category = {
+  id: string
+  name: string
+  name_ar: string
+  parent_id: string | null
+  is_active: boolean
+  sort_order: number
+  created_at: string
+}
+
 export type Product = {
   id: string
   name: string
@@ -11,6 +21,7 @@ export type Product = {
   sort_order: number
   description?: string
   created_at: string
+  category_id?: string | null
 }
 
 export function createSupabaseClient() {
