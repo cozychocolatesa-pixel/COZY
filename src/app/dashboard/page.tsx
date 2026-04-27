@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Product, Category } from '@/lib/supabase'
-import { Plus, Trash2, Eye, EyeOff, LogIn, Upload, GripVertical, Pencil, X } from 'lucide-react'
+import { Plus, Trash2, Eye, EyeOff, LogIn, Upload, GripVertical, Pencil, X, ChevronDown } from 'lucide-react'
 import Image from 'next/image'
 
 export default function Dashboard() {
@@ -22,6 +22,28 @@ export default function Dashboard() {
   const [settings, setSettings] = useState({ whatsapp: '', instagram_occasions: '', instagram_boxes: '' })
   const [savingSettings, setSavingSettings] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set())
+  const toggleCat = (id: string) => setCollapsedCats(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const [dragCatIdx, setDragCatIdx] = useState<number | null>(null)
+  const [dragParentId, setDragParentId] = useState<string | null>(null)
+  const [productFilter, setProductFilter] = useState<Record<string, string>>({ occasions: 'all', boxes: 'all' })
+
+  const handleCatDragStart = (idx: number, parentId: string) => { setDragCatIdx(idx); setDragParentId(parentId) }
+  const handleCatDragOver = (e: React.DragEvent, idx: number, parentId: string) => {
+    e.preventDefault()
+    if (dragCatIdx === null || dragCatIdx === idx || dragParentId !== parentId) return
+    const subs = categories.filter(c => c.parent_id === parentId)
+    const rest = categories.filter(c => c.parent_id !== parentId)
+    const [moved] = subs.splice(dragCatIdx, 1)
+    subs.splice(idx, 0, moved)
+    setCategories([...rest, ...subs])
+    setDragCatIdx(idx)
+  }
+  const handleCatDragEnd = async (parentId: string) => {
+    setDragCatIdx(null); setDragParentId(null)
+    const subs = categories.filter(c => c.parent_id === parentId)
+    await Promise.all(subs.map((c, i) => fetch('/api/categories', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: c.id, sort_order: i }) })))
+  }
   const [showCatForm, setShowCatForm] = useState<null | { parentId: string | null }>(null)
   const [newCat, setNewCat] = useState({ name: '', name_ar: '' })
   const [editingCat, setEditingCat] = useState<Category | null>(null)
@@ -302,8 +324,12 @@ export default function Dashboard() {
         </div>
 
         {/* Settings Panel */}
-        <div className="rounded-2xl p-6 mb-6" style={{background:'rgba(255,255,255,0.88)', backdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.5)'}}>
-          <h2 className="text-lg font-bold text-[#3D2B1F] mb-4">⚙️ إعدادات التواصل</h2>
+        <div className="rounded-2xl mb-6 overflow-hidden" style={{background:'rgba(255,255,255,0.92)', backdropFilter:'blur(12px)', border:'2px solid rgba(119,149,153,0.55)', boxShadow:'0 4px 20px rgba(61,43,31,0.1)'}}>
+          <div className="flex items-center gap-3 px-6 py-4 border-b-2 border-[#779599]/40">
+            <div className="w-8 h-8 rounded-xl bg-[#779599]/15 flex items-center justify-center text-base">⚙️</div>
+            <h2 className="text-base font-bold text-[#3D2B1F]">إعدادات التواصل</h2>
+          </div>
+          <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs text-[#3D2B1F]/60 mb-1 font-medium">رقم الواتساب</label>
@@ -343,18 +369,24 @@ export default function Dashboard() {
           >
             {savingSettings ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
           </button>
+          </div>
         </div>
 
         {/* Category Management Panel */}
-        <div className="rounded-2xl p-6 mb-6" style={{background:'rgba(255,255,255,0.88)', backdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.5)'}}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-[#3D2B1F]">📂 إدارة الأقسام</h2>
-            <span className="text-xs text-[#779599] bg-[#779599]/10 px-2 py-1 rounded-lg">🖼 أيقونة الفرع: PNG · 200×200 بكسل · حجم أقصى 500 كيلوبايت</span>
+        <div className="rounded-2xl mb-6 overflow-hidden" style={{background:'rgba(255,255,255,0.92)', backdropFilter:'blur(12px)', border:'2px solid rgba(119,149,153,0.55)', boxShadow:'0 4px 20px rgba(61,43,31,0.1)'}}>
+          <div className="flex items-center justify-between px-6 py-4 border-b-2 border-[#779599]/40">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-[#779599]/15 flex items-center justify-center text-base">📂</div>
+              <h2 className="text-base font-bold text-[#3D2B1F]">إدارة الأقسام</h2>
+            </div>
+            <span className="text-xs text-[#779599] bg-[#779599]/10 px-2 py-1 rounded-lg">🖼 أيقونة الفرع: PNG · 200×200 · 500KB</span>
           </div>
+          <div className="p-6">
           {categories.filter(c => c.parent_id === null).map(main => (
-            <div key={main.id} className="mb-4 border border-[#779599]/20 rounded-xl overflow-hidden">
+            <div key={main.id} className="mb-4 rounded-xl overflow-hidden" style={{border:'2px solid rgba(119,149,153,0.55)'}}>
+
               {/* Main category row */}
-              <div className="flex items-center justify-between px-4 py-3 bg-[#779599]/10">
+              <div className="flex items-center justify-between px-4 py-3 bg-[#779599]/10 cursor-pointer select-none" onClick={() => toggleCat(main.id)}>
                 {editingCat?.id === main.id ? (
                   <div className="flex gap-2 flex-1">
                     <input value={editingCat.name_ar} onChange={e => setEditingCat(c => c ? {...c, name_ar: e.target.value} : c)}
@@ -365,9 +397,12 @@ export default function Dashboard() {
                     <button onClick={() => setEditingCat(null)} className="px-3 py-1 border border-[#779599]/30 text-[#3D2B1F]/60 rounded-lg text-xs">إلغاء</button>
                   </div>
                 ) : (
-                  <span className="font-bold text-[#3D2B1F]">{main.name_ar} <span className="text-[#3D2B1F]/40 text-xs font-normal">({main.name})</span></span>
+                  <div className="flex items-center gap-2">
+                    <ChevronDown size={14} className="text-[#3D2B1F]/40 transition-transform duration-200" style={{transform: collapsedCats.has(main.id) ? 'rotate(-90deg)' : 'rotate(0deg)'}} />
+                    <span className="font-bold text-[#3D2B1F]">{main.name_ar} <span className="text-[#3D2B1F]/40 text-xs font-normal">({main.name})</span></span>
+                  </div>
                 )}
-                <div className="flex gap-2 items-center mr-2">
+                <div className="flex gap-2 items-center mr-2" onClick={e => e.stopPropagation()}>
                   <button onClick={() => updateCategory(main.id, {is_active: !main.is_active})}
                     className={`text-xs px-2 py-1 rounded-lg ${main.is_active ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
                     {main.is_active ? 'ظاهر' : 'مخفي'}
@@ -381,9 +416,19 @@ export default function Dashboard() {
                 </div>
               </div>
               {/* Subcategories */}
-              <div className="px-4 py-2 space-y-1">
-                {categories.filter(c => c.parent_id === main.id).map(sub => (
-                  <div key={sub.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[#779599]/5 gap-2">
+              <div className={`px-4 py-2 space-y-1 ${collapsedCats.has(main.id) ? 'hidden' : ''}`}>
+                {categories.filter(c => c.parent_id === main.id).map((sub, subIdx) => (
+                  <div
+                    key={sub.id}
+                    draggable
+                    onDragStart={() => handleCatDragStart(subIdx, main.id)}
+                    onDragOver={e => handleCatDragOver(e, subIdx, main.id)}
+                    onDragEnd={() => handleCatDragEnd(main.id)}
+                    className={`flex items-center justify-between py-2 px-3 rounded-lg gap-2 cursor-grab active:cursor-grabbing transition-colors ${
+                      dragCatIdx === subIdx && dragParentId === main.id ? 'bg-[#779599]/20 opacity-50' : 'hover:bg-[#779599]/5'
+                    }`}
+                  >
+                    <GripVertical size={14} className="text-[#3D2B1F]/20 flex-shrink-0" />
                     {/* Icon preview + upload */}
                     <div className="relative flex-shrink-0 group">
                       {(() => {
@@ -399,8 +444,8 @@ export default function Dashboard() {
                         const fallback = localMap[sub.name] ? `/icons/${folder}/${localMap[sub.name]}` : null
                         const iconSrc = sub.icon_url || fallback
                         return iconSrc
-                          ? <img src={iconSrc} alt={sub.name_ar} className="w-9 h-9 rounded-lg object-cover border border-[#779599]/20" />
-                          : <div className="w-9 h-9 rounded-lg bg-[#779599]/10 border border-dashed border-[#779599]/30 flex items-center justify-center text-[#779599]/40 text-xs">🖼</div>
+                          ? <img src={iconSrc} alt={sub.name_ar} className="w-10 h-10 rounded-xl object-cover" style={{border:'2px solid rgba(119,149,153,0.4)', boxShadow:'0 1px 6px rgba(61,43,31,0.1)'}} />
+                          : <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[#779599]/40" style={{border:'2px dashed rgba(119,149,153,0.3)', background:'rgba(119,149,153,0.07)'}}>🖼</div>
                       })()}
                       <label className="absolute inset-0 cursor-pointer rounded-lg opacity-0 group-hover:opacity-100 bg-black/40 flex items-center justify-center transition-opacity">
                         <Upload size={14} className="text-white" />
@@ -423,15 +468,15 @@ export default function Dashboard() {
                         <button onClick={() => setEditingCat(null)} className="px-3 py-1 border border-[#779599]/30 text-[#3D2B1F]/60 rounded-lg text-xs">إلغاء</button>
                       </div>
                     ) : (
-                      <span className="text-[#3D2B1F]/80 text-sm flex-1">— {sub.name_ar} <span className="text-[#3D2B1F]/30 text-xs">({sub.name})</span></span>
+                      <span className="text-[#3D2B1F]/85 text-sm font-medium flex-1">{sub.name_ar} <span className="text-[#3D2B1F]/30 text-xs font-normal">({sub.name})</span></span>
                     )}
                     <div className="flex gap-1 items-center">
                       <button onClick={() => updateCategory(sub.id, {is_active: !sub.is_active})}
-                        className={`text-xs px-2 py-0.5 rounded ${sub.is_active ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
+                        className={`flex items-center gap-1 text-sm px-3 py-1 rounded-lg font-semibold transition-colors ${sub.is_active ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-red-400 text-white hover:bg-red-500'}`}>
                         {sub.is_active ? 'ظاهر' : 'مخفي'}
                       </button>
-                      <button onClick={() => setEditingCat(sub)} className="p-1 text-[#779599] hover:bg-[#779599]/10 rounded"><Pencil size={13} /></button>
-                      <button onClick={() => deleteCategory(sub.id)} className="p-1 text-red-400 hover:bg-red-50 rounded"><Trash2 size={13} /></button>
+                      <button onClick={() => setEditingCat(sub)} className="p-2 text-[#779599] hover:bg-[#779599]/10 rounded-lg transition-colors"><Pencil size={16} /></button>
+                      <button onClick={() => deleteCategory(sub.id)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 size={16} /></button>
                     </div>
                   </div>
                 ))}
@@ -458,18 +503,27 @@ export default function Dashboard() {
           ) : (
             <button onClick={() => { setShowCatForm({parentId: null}); setNewCat({name:'',name_ar:''}) }}
               className="flex items-center gap-1 mt-2 px-4 py-2 border border-dashed border-[#779599]/40 text-[#3D2B1F]/60 rounded-xl text-sm hover:border-[#779599] hover:text-[#3D2B1F] transition-colors">
-              <Plus size={14} /> قسم رئيسي جديد
+              <Plus size={14} /> <span className="font-bold">قسم رئيسي جديد</span>
             </button>
           )}
+          </div>
         </div>
 
         {/* Products Table */}
         {(['occasions', 'boxes'] as const).map(cat => {
+          const mainCat = categories.find(c => c.parent_id === null && c.name === cat)
+          const subs = mainCat ? categories.filter(c => c.parent_id === mainCat.id) : []
+          const activeFilter = productFilter[cat] || 'all'
           const catProducts = products.filter(p => p.category === cat)
+          const filteredProducts = activeFilter === 'all' ? catProducts : catProducts.filter(p => p.category_id === activeFilter)
           return (
-          <div key={cat} className="rounded-2xl overflow-hidden mb-4" style={{background:'rgba(255,255,255,0.88)', backdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.5)'}}>
-            <div className="flex items-center justify-between p-4 bg-[#779599]/20 border-b border-[#779599]/20">
-              <span className="text-[#3D2B1F] font-bold text-sm">{cat === 'occasions' ? '🎉 مناسبات' : '📦 بوكسات'} ({catProducts.length})</span>
+          <div key={cat} className="rounded-2xl overflow-hidden mb-4" style={{background:'rgba(255,255,255,0.92)', backdropFilter:'blur(12px)', border:'2px solid rgba(119,149,153,0.8)', boxShadow:'0 4px 20px rgba(61,43,31,0.1)'}}>
+            <div className="flex items-center justify-between p-4 border-b-2 border-[#779599]/25" style={{background:'rgba(119,149,153,0.12)'}}>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-[#779599]/20 flex items-center justify-center text-base">{cat === 'occasions' ? '🎉' : '📦'}</div>
+                <span className="text-[#3D2B1F] font-bold">{cat === 'occasions' ? 'مناسبات' : 'بوكسات'}</span>
+                <span className="text-xs text-[#779599] bg-[#779599]/15 px-2 py-0.5 rounded-full font-medium">{catProducts.length}</span>
+              </div>
               <button
                 onClick={() => { setShowForm(cat); setNewProduct(p => ({...p, category: cat})) }}
                 className="flex items-center gap-1 px-3 py-1.5 bg-[#D4AF37] text-[#3D2B1F] rounded-lg text-xs font-bold hover:opacity-90 transition-opacity"
@@ -477,6 +531,26 @@ export default function Dashboard() {
                 <Plus size={14} /> إضافة
               </button>
             </div>
+            {subs.length > 0 && (
+              <div className="flex flex-wrap gap-2 px-4 py-3 border-b border-[#779599]/15 bg-white/30">
+                {[{id:'all', name_ar:'الكل'}, ...subs].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setProductFilter(f => ({...f, [cat]: tab.id}))}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                      activeFilter === tab.id
+                        ? 'bg-[#779599] text-white'
+                        : 'bg-[#779599]/10 text-[#3D2B1F]/60 hover:bg-[#779599]/20'
+                    }`}
+                  >
+                    {tab.name_ar}
+                    {tab.id !== 'all' && (
+                      <span className="mr-1 opacity-60">({catProducts.filter(p => p.category_id === tab.id).length})</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {showForm === cat && (
               <div className="p-4 border-b border-[#779599]/20 bg-white/50">
@@ -497,7 +571,7 @@ export default function Dashboard() {
                   <select value={newProduct.category_id || ''} onChange={e => setNewProduct(p => ({...p, category_id: e.target.value || null}))}
                     className="px-3 py-2 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] focus:border-[#779599] focus:outline-none text-sm">
                     <option value="">— بدون قسم فرعي —</option>
-                    {categories.filter(c => c.parent_id !== null && categories.find(m => m.id === c.parent_id)?.name === cat).map(sub => (
+                    {categories.filter(c => c.parent_id === categories.find(m => m.parent_id === null && m.name === cat)?.id).map(sub => (
                       <option key={sub.id} value={sub.id}>{sub.name_ar}</option>
                     ))}
                   </select>
@@ -518,28 +592,31 @@ export default function Dashboard() {
               </div>
             )}
 
-            <div className="grid grid-cols-[1fr_100px_100px_120px_80px] gap-4 px-4 py-2 bg-[#779599]/10 text-[#3D2B1F]/60 text-xs border-b border-[#779599]/10">
-              <span>المنتج</span><span>السعر</span><span>الترتيب</span><span>الحالة</span><span></span>
+            <div className="grid gap-4 px-4 py-2.5 text-[#3D2B1F]/50 text-xs font-semibold tracking-wide border-b-2 border-[#779599]/20" style={{gridTemplateColumns:'1fr 70px 70px 100px 100px 80px', background:'rgba(119,149,153,0.06)'}}>
+              <span>المنتج</span><span>👁 مشاهدة</span><span>❤️ إعجاب</span><span>السعر</span><span>الحالة</span><span></span>
             </div>
 
-          {catProducts.map((product, index) => (
+          {filteredProducts.map((product, index) => (
             <div
               key={product.id}
               draggable
               onDragStart={() => handleDragStart(index, cat)}
               onDragOver={(e) => handleDragOver(e, index, cat)}
               onDragEnd={() => handleDragEnd(cat)}
-              className={`grid grid-cols-[1fr_100px_100px_120px_80px] gap-4 p-4 items-center border-b border-[#779599]/15 transition-colors cursor-grab active:cursor-grabbing ${
+              className={`grid gap-4 p-4 items-center border-b border-[#779599]/20 transition-colors cursor-grab active:cursor-grabbing ${
                 dragIndex === index && dragCategory === cat ? 'bg-[#779599]/20 opacity-50' : 'hover:bg-[#779599]/10'
               }`}
+              style={{gridTemplateColumns:'1fr 70px 70px 100px 100px 80px'}}
             >
               <div className="flex items-center gap-3">
                 <GripVertical size={16} className="text-[#3D2B1F]/30" />
                 <div>
-                  <p className="text-[#3D2B1F] font-medium">{product.name_ar}</p>
-                  <p className="text-[#3D2B1F]/50 text-sm">{product.name}</p>
+                  <p className="text-[#3D2B1F] text-sm font-medium">{product.name_ar}</p>
+                  {product.name && <p className="text-[#3D2B1F]/40 text-xs">{product.name}</p>}
                 </div>
               </div>
+              <span className="text-[#3D2B1F]/60 text-sm font-medium">{product.views ?? 0}</span>
+              <span className="text-[#3D2B1F]/60 text-sm font-medium">{product.likes ?? 0}</span>
               <div>
                 {editingId === product.id ? (
                   <input
@@ -567,13 +644,12 @@ export default function Dashboard() {
                   </span>
                 )}
               </div>
-              <span className="text-[#3D2B1F]/60">{product.sort_order}</span>
               <button
                 onClick={() => toggleActive(product)}
-                className={`flex items-center gap-1 text-sm px-3 py-1 rounded-lg transition-colors ${
+                className={`flex items-center gap-1 text-sm px-3 py-1 rounded-lg font-semibold transition-colors ${
                   product.is_active
-                    ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
-                    : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : 'bg-red-400 text-white hover:bg-red-500'
                 }`}
               >
                 {product.is_active ? <Eye size={14} /> : <EyeOff size={14} />}
@@ -677,7 +753,7 @@ export default function Dashboard() {
                 className="px-4 py-3 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] focus:border-[#779599] focus:outline-none"
               >
                 <option value="">— بدون قسم فرعي —</option>
-                {categories.filter(c => c.parent_id !== null && categories.find(m => m.id === c.parent_id)?.name === editingProduct.category).map(sub => (
+                {categories.filter(c => c.parent_id === categories.find(m => m.parent_id === null && m.name === editingProduct.category)?.id).map(sub => (
                   <option key={sub.id} value={sub.id}>{sub.name_ar}</option>
                 ))}
               </select>
@@ -699,7 +775,7 @@ export default function Dashboard() {
             </div>
             <div className="flex gap-3 mt-4">
               <button
-                onClick={async () => { await updateProduct(editingProduct.id, { name: editingProduct.name, name_ar: editingProduct.name_ar, price: editingProduct.price, category: editingProduct.category, image_url: editingProduct.image_url, description: editingProduct.description }); setEditingProduct(null) }}
+                onClick={async () => { await updateProduct(editingProduct.id, { name: editingProduct.name, name_ar: editingProduct.name_ar, price: editingProduct.price, category: editingProduct.category, category_id: editingProduct.category_id, image_url: editingProduct.image_url, description: editingProduct.description }); setEditingProduct(null) }}
                 className="px-6 py-2 bg-gradient-to-r from-[#D4AF37] to-[#C5A55A] text-[#3D2B1F] rounded-xl font-bold hover:opacity-90 transition-opacity"
               >
                 حفظ التعديلات

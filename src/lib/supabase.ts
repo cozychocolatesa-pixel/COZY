@@ -23,6 +23,8 @@ export type Product = {
   description?: string
   created_at: string
   category_id?: string | null
+  views?: number
+  likes?: number
 }
 
 export function createSupabaseClient() {

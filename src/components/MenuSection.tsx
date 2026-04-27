@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Image from 'next/image'
-import { X } from 'lucide-react'
+import { X, ChevronDown } from 'lucide-react'
 import SARSymbol from './SARSymbol'
 import { Product, Category } from '@/lib/supabase'
 
@@ -22,7 +22,61 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
   const titleRef = useRef<HTMLDivElement>(null)
   const [selected, setSelected] = useState<Product | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
-  const [activeTab, setActiveTab] = useState<string>('all')
+  const [openId, setOpenId] = useState<string | null>(null)
+  const contentRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const [liked, setLiked] = useState<Set<string>>(new Set())
+  const [views, setViews] = useState<Record<string, number>>({})
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
+  const [shared, setShared] = useState(false)
+
+  useEffect(() => {
+    const l = JSON.parse(localStorage.getItem('cozy_likes') || '[]')
+    setLiked(new Set(l))
+    const counts: Record<string, number> = {}
+    const viewCounts: Record<string, number> = {}
+    products.forEach(p => {
+      if (p.likes != null) counts[p.id] = p.likes
+      if (p.views != null) viewCounts[p.id] = p.views
+    })
+    setLikeCounts(counts)
+    setViews(viewCounts)
+  }, [products])
+
+  const formatCount = (n: number) => n >= 1000 ? (n / 1000).toFixed(1).replace('.0', '') + 'k' : String(n)
+
+  const openProduct = (product: Product) => {
+    setSelected(product)
+    const viewed = new Set<string>(JSON.parse(localStorage.getItem('cozy_viewed') || '[]'))
+    if (!viewed.has(product.id)) {
+      viewed.add(product.id)
+      localStorage.setItem('cozy_viewed', JSON.stringify(Array.from(viewed)))
+      setViews(prev => ({ ...prev, [product.id]: (prev[product.id] || 0) + 1 }))
+      fetch('/api/product-stats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: product.id, action: 'view' }) }).catch(() => {})
+    }
+  }
+
+  const toggleLike = (id: string) => {
+    const isLiking = !liked.has(id)
+    setLiked(prev => {
+      const next = new Set(prev)
+      isLiking ? next.add(id) : next.delete(id)
+      localStorage.setItem('cozy_likes', JSON.stringify(Array.from(next)))
+      return next
+    })
+    setLikeCounts(prev => ({ ...prev, [id]: Math.max(0, (prev[id] || 0) + (isLiking ? 1 : -1)) }))
+    fetch('/api/product-stats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action: isLiking ? 'like' : 'unlike' }) }).catch(() => {})
+  }
+
+  const shareProduct = async (product: Product) => {
+    const text = `${product.name_ar} — ${product.price} ريال`
+    if (navigator.share) {
+      await navigator.share({ title: product.name_ar, text, url: window.location.href }).catch(() => {})
+    } else {
+      await navigator.clipboard.writeText(`${text}\n${window.location.href}`)
+    }
+    setShared(true)
+    setTimeout(() => setShared(false), 2000)
+  }
 
   useEffect(() => {
     fetch('/api/categories').then(r => r.json()).then(data => setCategories(data))
@@ -34,17 +88,62 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
         scrollTrigger: { trigger: titleRef.current, start: 'top 85%', toggleActions: 'play none none reverse' },
         opacity: 0, y: 50, duration: 1, ease: 'power3.out',
       })
-      const cards = sectionRef.current?.querySelectorAll('.product-card')
-      if (cards) {
-        gsap.fromTo(cards,
-          { opacity: 0, y: 40, scale: 0.95 },
-          { scrollTrigger: { trigger: sectionRef.current, start: 'top 65%', toggleActions: 'play none none reverse' },
-            opacity: 1, y: 0, scale: 1, duration: 0.7, stagger: 0.08, ease: 'power3.out' }
-        )
-      }
     }, sectionRef)
     return () => ctx.revert()
-  }, [products.length, activeTab])
+  }, [])
+
+  const toggleAccordion = (subId: string) => {
+    const isOpening = openId !== subId
+
+    if (openId && contentRefs.current[openId]) {
+      const el = contentRefs.current[openId]!
+      gsap.to(el, { height: 0, duration: 0.55, ease: 'power3.inOut' })
+    }
+
+    if (!isOpening) { setOpenId(null); return }
+
+    setOpenId(subId)
+    requestAnimationFrame(() => {
+      const el = contentRefs.current[subId]
+      if (!el) return
+      el.style.height = 'auto'
+      const h = el.scrollHeight
+      el.style.height = '0px'
+      gsap.to(el, {
+        height: h, duration: 0.65, ease: 'power3.inOut',
+        onComplete: () => { el.style.height = 'auto' },
+      })
+      const cards = el.querySelectorAll('.product-card')
+      gsap.fromTo(cards,
+        { opacity: 0, y: 50, scale: 0.85, rotateX: 8 },
+        { opacity: 1, y: 0, scale: 1, rotateX: 0, duration: 0.65, stagger: 0.12, ease: 'power3.out', delay: 0.25 }
+      )
+    })
+  }
+
+  const renderCard = (product: Product) => (
+    <div
+      key={product.id}
+      onClick={() => openProduct(product)}
+      className="product-card group cursor-pointer flex flex-col items-center gap-3"
+    >
+      <div
+        className="relative overflow-hidden rounded-full shadow-lg w-28 h-28 sm:w-32 sm:h-32"
+        style={{ border: '2px solid rgba(212,175,55,0.3)', transition: 'transform 0.35s cubic-bezier(0.23,1,0.32,1), box-shadow 0.35s ease, border-color 0.35s ease' }}
+        onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'scale(1.08)'; el.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5),0 0 20px rgba(212,175,55,0.3)'; el.style.borderColor = 'rgba(212,175,55,0.8)' }}
+        onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'scale(1)'; el.style.boxShadow = ''; el.style.borderColor = 'rgba(212,175,55,0.3)' }}
+      >
+        {product.image_url
+          ? <Image src={product.image_url} alt={product.name_ar} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
+          : <div className="w-full h-full" style={{ background: 'linear-gradient(135deg,#2a1a0e,#3d2b1f,#1a0f06)' }} />
+        }
+      </div>
+      <div className="text-center transition-all duration-300 group-hover:scale-110" dir="rtl">
+        <p className="text-white/70 text-sm font-semibold leading-tight line-clamp-2 transition-colors duration-300 group-hover:text-white">{product.name_ar}</p>
+        <p className="text-gold-300/70 text-sm mt-1 font-bold transition-colors duration-300 group-hover:text-gold-200">{product.price} <SARSymbol className="opacity-80" /></p>
+      </div>
+    </div>
+  )
 
   return (
     <section id={id} ref={sectionRef} className="py-24 px-4 md:px-8 overflow-hidden">
@@ -54,113 +153,66 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
         <div className="w-20 h-px bg-gradient-to-r from-transparent via-gold-500/60 to-transparent mx-auto mt-6" />
       </div>
 
-      {/* Subcategory Tabs */}
+      {/* Accordion */}
       {(() => {
         const mainCat = categories.find(c => c.parent_id === null && c.name === id)
         const rawSubs = mainCat ? categories.filter(c => c.parent_id === mainCat.id && c.is_active) : []
-        const seen = new Set<string>(); const subs = rawSubs.filter(s => { if (seen.has(s.name)) return false; seen.add(s.name); return true })
-        if (subs.length === 0) return null
-        const folder = id === 'occasions' ? 'munasabat' : 'boxes'
-        const iconFiles: Record<string, string> = {
-          chocolate:       `${folder}/chocolate.png`,
-          petit_four:      'munasabat/petit-four.png',
-          salties:         'munasabat/salties.png',
-          hala_qahwa:      `${folder}/hala-qahwa.png`,
-          packages:        'munasabat/package.png',
-          rental_trays:    'munasabat/rental-trays.png',
-          special_offers:  'boxes/special-offers.png',
-          chocolate_bites: 'boxes/chocolate-bites.png',
-          biscuits:        'boxes/biscuits.png',
-          pudding:         'boxes/pudding.png',
-          choices_set:     'boxes/choices-set.png',
-          trays:           'boxes/trays.png',
-          coffee:          'boxes/coffee.png',
-        }
-        const allTabs = [{id:'all', name_ar:'الكل', name:'all'}, ...subs]
-        return (
-          <div className="mb-10 px-4">
-            <div className="flex flex-wrap justify-center gap-3">
-              {allTabs.map(tab => {
-                const isActive = activeTab === tab.id
-                const dbIcon = 'icon_url' in tab ? tab.icon_url : null
-                const src = tab.name === 'all' ? null : (dbIcon || (iconFiles[tab.name] ? `/icons/${iconFiles[tab.name]}` : null))
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex flex-col items-center gap-2 w-[90px] py-3 rounded-2xl font-medium transition-all duration-300 ${
-                      isActive ? 'text-[#1a0f00] scale-105' : 'text-brand-cream/60 hover:text-brand-cream/90 hover:scale-105'
-                    }`}
-                    style={isActive
-                      ? {background:'linear-gradient(145deg,#D4AF37,#B8902E)', boxShadow:'0 6px 20px rgba(212,175,55,0.45)'}
-                      : {background:'rgba(255,255,255,0.04)', border:'1px solid rgba(212,175,55,0.15)'}}
-                  >
-                    {src
-                      ? <img src={src} alt={tab.name_ar} width={56} height={56} className="rounded-xl object-cover" />
-                      : <span className="text-3xl">✨</span>
-                    }
-                    <span className="text-xs leading-snug text-center w-full px-1">{tab.name_ar}</span>
-                  </button>
-                )
-              })}
+        const seen = new Set<string>()
+        const subs = rawSubs.filter(s => { if (seen.has(s.name)) return false; seen.add(s.name); return true })
+
+        if (subs.length === 0) {
+          return (
+            <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-6 md:gap-10">
+              {products.map(p => renderCard(p))}
             </div>
+          )
+        }
+
+        const noCategoryId = products.every(p => !p.category_id)
+
+        return (
+          <div className="max-w-2xl mx-auto" style={{border:'1.5px solid rgba(245,240,235,0.35)', borderRadius:'16px', overflow:'hidden'}}>
+            {subs.map((sub, idx) => {
+              const subProducts = noCategoryId
+                ? (idx === 0 ? products : [])
+                : products.filter(p => p.category_id === sub.id)
+              const isOpen = openId === sub.id
+              return (
+                <div key={sub.id} style={idx > 0 ? {borderTop:'2px solid rgba(245,240,235,0.5)'} : {}}>
+                  <button
+                    onClick={() => toggleAccordion(sub.id)}
+                    className="w-full grid px-4 py-5 group"
+                    style={{ gridTemplateColumns: '32px 1fr 32px', background: isOpen ? 'rgba(245,240,235,0.06)' : 'transparent' }}
+                  >
+                    <div className="flex items-center">
+                      <ChevronDown
+                        size={16}
+                        className="text-brand-cream/50 transition-transform duration-300"
+                        style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                      />
+                    </div>
+                    <span className={`text-xl font-bold text-center tracking-wide transition-colors duration-300 ${isOpen ? 'text-brand-cream' : 'text-brand-cream/85 group-hover:text-brand-cream'}`}>
+                      {sub.name_ar}
+                    </span>
+                    <div />
+                  </button>
+                  <div
+                    ref={el => { contentRefs.current[sub.id] = el }}
+                    style={{ height: 0, overflow: 'hidden' }}
+                  >
+                    <div className="py-8 flex flex-wrap justify-center gap-6 md:gap-10" style={{ perspective: '800px' }}>
+                      {subProducts.map(p => renderCard(p))}
+                      {subProducts.length === 0 && (
+                        <p className="text-brand-cream/30 text-sm py-4">قريباً...</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )
       })()}
-
-      <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-6 md:gap-10">
-        {products.filter(p => activeTab === 'all' || p.category_id === activeTab).map((product) => (
-          <div
-            key={product.id}
-            onClick={() => setSelected(product)}
-            className="product-card group cursor-pointer flex flex-col items-center gap-3"
-          >
-            {/* Circle image */}
-            <div
-              className="relative overflow-hidden rounded-full shadow-lg w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36"
-              style={{
-                border: '2px solid rgba(212,175,55,0.3)',
-                transition: 'transform 0.35s cubic-bezier(0.23,1,0.32,1), box-shadow 0.35s ease, border-color 0.35s ease',
-              }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLDivElement
-                el.style.transform = 'scale(1.08)'
-                el.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5), 0 0 20px rgba(212,175,55,0.3)'
-                el.style.borderColor = 'rgba(212,175,55,0.8)'
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLDivElement
-                el.style.transform = 'scale(1)'
-                el.style.boxShadow = ''
-                el.style.borderColor = 'rgba(212,175,55,0.3)'
-              }}
-            >
-              {product.image_url ? (
-                <Image
-                  src={product.image_url}
-                  alt={product.name_ar}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-              ) : (
-                <div className="w-full h-full" style={{background:'linear-gradient(135deg, #2a1a0e 0%, #3d2b1f 50%, #1a0f06 100%)'}} />
-              )}
-            </div>
-
-            {/* Name + Price below circle */}
-            <div className="text-center transition-all duration-300 group-hover:scale-110" dir="rtl">
-              <p className="text-white/70 text-sm font-semibold leading-tight line-clamp-2 transition-colors duration-300 group-hover:text-white">{product.name_ar}</p>
-              <p className="text-gold-300/70 text-sm mt-1 font-bold transition-colors duration-300 group-hover:text-gold-200">{product.price} <SARSymbol className="opacity-80" /></p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {products.length === 0 && (
-        <div className="text-center py-20">
-          <p className="text-brand-cream/60 text-lg">قريباً...</p>
-        </div>
-      )}
 
       {/* Product Detail Modal */}
       {selected && (
@@ -206,18 +258,18 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
             </div>
 
             {/* Details — 40% — scrollable on mobile */}
-            <div className="flex-1 flex flex-col justify-center gap-4 p-6 md:p-9 overflow-y-auto" dir="rtl">
+            <div className="flex-1 flex flex-col justify-center gap-3 p-5 md:p-7" dir="rtl">
               {/* Category badge */}
               <span className="text-xs text-gold-400/70 tracking-[0.2em] border border-gold-500/20 px-3 py-1 rounded-full w-fit">
                 {selected.category === 'occasions' ? 'مناسبات' : 'بوكسات'}
               </span>
 
-              <h2 className="text-2xl md:text-3xl font-bold text-white leading-snug">{selected.name_ar}</h2>
+              <h2 className="text-xl md:text-2xl font-bold text-white leading-snug">{selected.name_ar}</h2>
               {selected.name && <p className="text-sage-400 text-sm tracking-widest -mt-2">{selected.name}</p>}
 
               <div className="w-12 h-px bg-gold-500/40" />
 
-              <span className="text-3xl font-bold text-gold-300 flex items-center gap-2">
+              <span className="text-2xl font-bold text-gold-300 flex items-center gap-2">
                 {selected.price}
                 <SARSymbol className="text-gold-400/80" />
               </span>
@@ -228,6 +280,30 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
                   <p className="text-brand-cream/80 text-sm leading-relaxed">{selected.description}</p>
                 </div>
               )}
+
+              {/* Views / Like / Share */}
+              <div className="flex items-center gap-3 pt-2 border-t border-white/10">
+                <span className="flex items-center gap-2 text-brand-cream/50 text-sm">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  {formatCount(views[selected.id] || 1)}
+                </span>
+                <button
+                  onClick={() => toggleLike(selected.id)}
+                  className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full transition-all duration-200"
+                  style={{ background: liked.has(selected.id) ? 'rgba(248,113,113,0.15)' : 'rgba(255,255,255,0.06)', color: liked.has(selected.id) ? '#f87171' : 'rgba(245,240,235,0.6)', border: liked.has(selected.id) ? '1px solid rgba(248,113,113,0.3)' : '1px solid rgba(255,255,255,0.1)' }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill={liked.has(selected.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  {liked.has(selected.id) ? 'أعجبني' : 'إعجاب'} · {formatCount(likeCounts[selected.id] || 0)}
+                </button>
+                <button
+                  onClick={() => shareProduct(selected)}
+                  className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full transition-all duration-200 mr-auto"
+                  style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(245,240,235,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                  {shared ? '✓ تم النسخ' : 'مشاركة'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
