@@ -142,12 +142,15 @@ export default function Dashboard() {
 
   const saveSettings = async () => {
     setSavingSettings(true)
-    await fetch('/api/settings', {
+    const res = await fetch('/api/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings),
     })
+    const data = await res.json()
     setSavingSettings(false)
+    if (!res.ok || data.error) { alert('خطأ في الحفظ: ' + (data.error || res.status)); return }
+    alert('تم الحفظ بنجاح ✓')
   }
 
   const sendOtp = async () => {
