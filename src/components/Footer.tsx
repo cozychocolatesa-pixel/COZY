@@ -24,7 +24,7 @@ export default function Footer() {
 
         <p className="text-[#F5F0EB]/80 mb-10 text-sm">{s.footer_tagline || 'شوكولاتة مصنوعة بحب في الجبيل'}</p>
 
-        <div className="flex gap-8 justify-center items-center">
+        <div className="flex flex-wrap gap-x-6 gap-y-4 justify-center items-center">
           {s.whatsapp && (
             <a href={`https://wa.me/${s.whatsapp}`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 text-[#F5F0EB] hover:text-white transition-colors duration-300">
