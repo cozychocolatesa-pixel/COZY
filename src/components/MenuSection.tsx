@@ -240,7 +240,7 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
             </button>
 
             {/* Image — 60% */}
-            <div className="relative w-full md:w-[60%] aspect-square md:aspect-auto min-h-[180px] max-h-[40vh] md:max-h-none md:min-h-[420px] flex-shrink-0">
+            <div className="relative w-full md:w-[60%] aspect-square md:aspect-auto min-h-[160px] max-h-[28vh] md:max-h-none md:min-h-[420px] flex-shrink-0">
               {selected.image_url ? (
                 <Image
                   src={selected.image_url}
