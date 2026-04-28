@@ -10,7 +10,7 @@ export default function Footer() {
   const [s, setS] = useState({ whatsapp: '', instagram_occasions: '', instagram_boxes: '', footer_tagline: '', footer_copyright: '', store_website: '', order_link: '' })
 
   useEffect(() => {
-    fetch('/api/settings').then(r => r.json()).then(data => setS(prev => ({ ...prev, ...data })))
+    fetch('/api/settings').then(r => r.json()).then(data => setS(prev => ({ ...prev, ...data }))).catch(() => {})
   }, [])
 
   return (
@@ -50,7 +50,7 @@ export default function Footer() {
             <a href={s.order_link} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 text-[#F5F0EB] hover:text-white transition-colors duration-300">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-              <span className="text-sm">طلب الآن</span>
+              <span className="text-sm">اطلب الآن</span>
             </a>
           )}
           {s.store_website && (

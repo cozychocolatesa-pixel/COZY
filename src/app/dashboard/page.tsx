@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [settings, setSettings] = useState({ whatsapp: '', instagram_occasions: '', instagram_boxes: '', hero_tagline: '', occasions_subtitle: '', boxes_subtitle: '', footer_tagline: '', footer_copyright: '', store_website: '', order_link: '' })
   const [savingSettings, setSavingSettings] = useState(false)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set())
   const toggleCat = (id: string) => setCollapsedCats(prev => { const n = new Set(prev); if (n.has(id)) { n.delete(id) } else { n.add(id) }; return n })
@@ -138,6 +139,7 @@ export default function Dashboard() {
     const res = await fetch('/api/settings')
     const data = await res.json()
     setSettings(s => ({ ...s, ...data }))
+    setSettingsLoaded(true)
   }
 
   const saveSettings = async () => {
@@ -151,6 +153,7 @@ export default function Dashboard() {
     setSavingSettings(false)
     if (!res.ok || data.error) { alert('خطأ في الحفظ: ' + (data.error || res.status)); return }
     alert('تم الحفظ بنجاح ✓')
+    fetchSettings()
   }
 
   const sendOtp = async () => {
@@ -466,7 +469,7 @@ export default function Dashboard() {
           </div>
           <button
             onClick={saveSettings}
-            disabled={savingSettings}
+            disabled={savingSettings || !settingsLoaded}
             className="mt-4 px-6 py-2 bg-gradient-to-r from-[#D4AF37] to-[#C5A55A] text-[#3D2B1F] rounded-xl font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {savingSettings ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
@@ -666,10 +669,17 @@ export default function Dashboard() {
                   <input type="number" placeholder="السعر" value={newProduct.price || ''}
                     onChange={e => setNewProduct(p => ({...p, price: Number(e.target.value)}))}
                     className="px-3 py-2 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] placeholder:text-[#3D2B1F]/40 focus:border-[#779599] focus:outline-none text-sm" />
-                  <label className="px-3 py-2 bg-white border border-[#779599]/40 rounded-xl cursor-pointer hover:border-[#779599] flex items-center gap-2 text-[#3D2B1F] text-sm">
-                    <Upload size={16} />{newProduct.image_url ? 'تم الرفع ✓' : 'رفع صورة'}
-                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                  </label>
+                  {newProduct.image_url ? (
+                    <div className="relative rounded-xl overflow-hidden border border-[#779599]/40" style={{height:'80px'}}>
+                      <img src={newProduct.image_url} alt="صورة" className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => setNewProduct(p => ({...p, image_url: ''}))} className="absolute top-1 left-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"><X size={12} /></button>
+                    </div>
+                  ) : (
+                    <label className="px-3 py-2 bg-white border border-[#779599]/40 rounded-xl cursor-pointer hover:border-[#779599] flex items-center gap-2 text-[#3D2B1F] text-sm">
+                      <Upload size={16} />رفع صورة
+                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                    </label>
+                  )}
                   <select value={newProduct.category_id || ''} onChange={e => setNewProduct(p => ({...p, category_id: e.target.value || null}))}
                     className="px-3 py-2 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] focus:border-[#779599] focus:outline-none text-sm">
                     <option value="">— بدون قسم فرعي —</option>
@@ -713,6 +723,10 @@ export default function Dashboard() {
               <div className="md:hidden p-3 flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <GripVertical size={16} className="text-[#3D2B1F]/30 flex-shrink-0" />
+                  {product.image_url
+                    ? <img src={product.image_url} alt="" className="w-8 h-8 rounded-full object-cover border border-[#779599]/30 flex-shrink-0" />
+                    : <div className="w-8 h-8 rounded-full bg-[#779599]/15 flex items-center justify-center flex-shrink-0 text-[10px] text-[#779599]">لاصورة</div>
+                  }
                   <p className="text-[#3D2B1F] text-sm font-medium flex-1">{product.name_ar}</p>
                   <button onClick={() => toggleActive(product)}
                     className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg font-semibold ${
@@ -743,6 +757,10 @@ export default function Dashboard() {
               <div className="hidden md:grid gap-4 p-4 items-center" style={{gridTemplateColumns:'1fr 70px 70px 100px 100px 80px'}}>
                 <div className="flex items-center gap-3">
                   <GripVertical size={16} className="text-[#3D2B1F]/30" />
+                  {product.image_url
+                    ? <img src={product.image_url} alt="" className="w-9 h-9 rounded-full object-cover border border-[#779599]/30 flex-shrink-0" />
+                    : <div className="w-9 h-9 rounded-full bg-[#779599]/10 flex items-center justify-center flex-shrink-0"><Upload size={12} className="text-[#779599]/40" /></div>
+                  }
                   <div>
                     <p className="text-[#3D2B1F] text-sm font-medium">{product.name_ar}</p>
                     {product.name && <p className="text-[#3D2B1F]/40 text-xs">{product.name}</p>}
@@ -867,14 +885,27 @@ export default function Dashboard() {
                 rows={2}
                 className="px-4 py-3 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] placeholder:text-[#3D2B1F]/40 focus:border-[#779599] focus:outline-none resize-none"
               />
-              <label className="px-4 py-3 bg-white border border-[#779599]/40 rounded-xl cursor-pointer hover:border-[#779599] flex items-center gap-2 text-[#3D2B1F]">
-                <Upload size={18} />
-                {editingProduct.image_url ? 'تغيير الصورة ✓' : 'رفع صورة'}
-                <input type="file" accept="image/*" onChange={async (e) => {
-                  const url = await handleImageUpload(e)
-                  setEditingProduct(p => p ? {...p, image_url: url ?? p.image_url} : p)
-                }} className="hidden" />
-              </label>
+              {editingProduct.image_url ? (
+                <div className="relative rounded-xl overflow-hidden border border-[#779599]/40" style={{height:'120px'}}>
+                  <img src={editingProduct.image_url} alt="صورة المنتج" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setEditingProduct(p => p ? {...p, image_url: ''} : p)}
+                    className="absolute top-2 left-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                  >
+                    <X size={14} />
+                  </button>
+                  <label className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 text-white rounded-lg text-xs cursor-pointer flex items-center gap-1">
+                    <Upload size={12} /> تغيير
+                    <input type="file" accept="image/*" onChange={async (e) => { const url = await handleImageUpload(e); setEditingProduct(p => p ? {...p, image_url: url ?? p.image_url} : p) }} className="hidden" />
+                  </label>
+                </div>
+              ) : (
+                <label className="px-4 py-3 bg-white border border-[#779599]/40 rounded-xl cursor-pointer hover:border-[#779599] flex items-center gap-2 text-[#3D2B1F]">
+                  <Upload size={18} />رفع صورة
+                  <input type="file" accept="image/*" onChange={async (e) => { const url = await handleImageUpload(e); setEditingProduct(p => p ? {...p, image_url: url ?? p.image_url} : p) }} className="hidden" />
+                </label>
+              )}
             </div>
             <div className="flex gap-3 mt-4">
               <button

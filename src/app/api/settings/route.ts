@@ -18,12 +18,14 @@ export async function GET() {
   const supabase = getSupabase()
   if (!supabase) return NextResponse.json({})
 
-  const { data } = await supabase.from('settings').select('key, value')
+  const { data } = await supabase.from('settings').select('key, value').limit(1000)
   if (!data) return NextResponse.json({})
 
   const result: Record<string, string> = {}
   data.forEach(({ key, value }) => { result[key] = value })
-  return NextResponse.json(result)
+  return NextResponse.json(result, {
+    headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
+  })
 }
 
 export async function PUT(request: NextRequest) {
@@ -37,17 +39,17 @@ export async function PUT(request: NextRequest) {
   const body: Record<string, string> = await request.json()
 
   const entries = Object.entries(body)
-  const keys = entries.map(([k]) => k)
 
-  // Delete existing then insert fresh
-  await supabase.from('settings').delete().in('key', keys)
-  const { error } = await supabase.from('settings').insert(
-    entries.map(([key, value]) => ({ key, value }))
-  )
-
-  if (error) {
-    console.error('Settings insert error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  for (const [key, value] of entries) {
+    const { data: existing } = await supabase.from('settings').select('key, value').eq('key', key).single()
+    if (existing) {
+      // Only overwrite if new value is non-empty OR existing value is already empty
+      if (value !== '' || existing.value === '' || existing.value === null) {
+        await supabase.from('settings').update({ value }).eq('key', key)
+      }
+    } else {
+      await supabase.from('settings').insert({ key, value })
+    }
   }
 
   return NextResponse.json({ success: true })
