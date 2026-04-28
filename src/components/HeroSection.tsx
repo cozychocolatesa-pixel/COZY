@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import Image from 'next/image'
 
@@ -10,6 +10,11 @@ export default function HeroSection() {
   const textRef = useRef<HTMLDivElement>(null)
   const descRef = useRef<HTMLParagraphElement>(null)
   const btnsRef = useRef<HTMLDivElement>(null)
+  const [heroTagline, setHeroTagline] = useState('أفخر أنواع الشوكولاتة المصنوعة يدوياً بحب')
+
+  useEffect(() => {
+    fetch('/api/settings').then(r => r.json()).then(d => { if (d.hero_tagline) setHeroTagline(d.hero_tagline) }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -110,7 +115,7 @@ export default function HeroSection() {
         </div>
 
         <p ref={descRef} className="text-lg md:text-xl text-brand-cream max-w-xl mx-auto mb-12 leading-relaxed tracking-wide drop-shadow-lg" style={{textShadow:'0 2px 12px rgba(0,0,0,0.7)'}}>
-          أفخر أنواع الشوكولاتة المصنوعة يدوياً بحب
+          {heroTagline}
         </p>
 
         <div ref={btnsRef} className="flex gap-5 justify-center">

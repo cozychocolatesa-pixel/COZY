@@ -19,7 +19,7 @@ export default function Dashboard() {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dragCategory, setDragCategory] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
-  const [settings, setSettings] = useState({ whatsapp: '', instagram_occasions: '', instagram_boxes: '' })
+  const [settings, setSettings] = useState({ whatsapp: '', instagram_occasions: '', instagram_boxes: '', hero_tagline: '', occasions_subtitle: '', boxes_subtitle: '', footer_tagline: '', footer_copyright: '', store_website: '', order_link: '' })
   const [savingSettings, setSavingSettings] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set())
@@ -27,6 +27,36 @@ export default function Dashboard() {
   const [dragCatIdx, setDragCatIdx] = useState<number | null>(null)
   const [dragParentId, setDragParentId] = useState<string | null>(null)
   const [productFilter, setProductFilter] = useState<Record<string, string>>({ occasions: 'all', boxes: 'all' })
+  const [works, setWorks] = useState<{id:string,type:string,url:string,sort_order:number}[]>([])
+  const [uploadingWork, setUploadingWork] = useState(false)
+
+  const fetchWorks = async () => {
+    const res = await fetch('/api/works')
+    setWorks(await res.json())
+  }
+
+  const deleteWork = async (id: string) => {
+    await fetch('/api/works', { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id}) })
+    setWorks(prev => prev.filter(w => w.id !== id))
+  }
+
+  const uploadWork = async (file: File) => {
+    setUploadingWork(true)
+    try {
+      const type = file.type.startsWith('video') ? 'video' : 'image'
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      const { url } = await res.json()
+      if (url) {
+        const newWork = await fetch('/api/works', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ type, url, sort_order: works.length }) })
+        const w = await newWork.json()
+        setWorks(prev => [...prev, w])
+      }
+    } finally {
+      setUploadingWork(false)
+    }
+  }
 
   const handleCatDragStart = (idx: number, parentId: string) => { setDragCatIdx(idx); setDragParentId(parentId) }
   const handleCatDragOver = (e: React.DragEvent, idx: number, parentId: string) => {
@@ -64,6 +94,7 @@ export default function Dashboard() {
       if (res.ok) {
         setIsAuth(true)
         fetchProducts()
+        fetchWorks()
         fetchSettings()
         fetchCategories()
       }
@@ -185,6 +216,7 @@ export default function Dashboard() {
     formData.append('file', file)
     const res = await fetch('/api/upload', { method: 'POST', body: formData })
     const data = await res.json()
+    if (!res.ok || !data.url) { alert('خطأ في رفع الصورة: ' + (data.error || 'unknown')); return '' }
     return data.url
   }
 
@@ -327,10 +359,30 @@ export default function Dashboard() {
         <div className="rounded-2xl mb-6 overflow-hidden" style={{background:'rgba(255,255,255,0.92)', backdropFilter:'blur(12px)', border:'2px solid rgba(119,149,153,0.55)', boxShadow:'0 4px 20px rgba(61,43,31,0.1)'}}>
           <div className="flex items-center gap-3 px-6 py-4 border-b-2 border-[#779599]/40">
             <div className="w-8 h-8 rounded-xl bg-[#779599]/15 flex items-center justify-center text-base">⚙️</div>
-            <h2 className="text-base font-bold text-[#3D2B1F]">إعدادات التواصل</h2>
+            <h2 className="text-base font-bold text-[#3D2B1F]">الإعدادات العامة</h2>
           </div>
           <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs text-[#3D2B1F]/60 mb-1 font-medium">رابط الطلب</label>
+              <input
+                placeholder="https://order.example.com"
+                value={settings.order_link}
+                onChange={e => setSettings(s => ({...s, order_link: e.target.value}))}
+                dir="ltr"
+                className="w-full px-3 py-2 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] placeholder:text-[#3D2B1F]/30 focus:border-[#779599] focus:outline-none text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-[#3D2B1F]/60 mb-1 font-medium">رابط الموقع</label>
+              <input
+                placeholder="https://www.example.com"
+                value={settings.store_website}
+                onChange={e => setSettings(s => ({...s, store_website: e.target.value}))}
+                dir="ltr"
+                className="w-full px-3 py-2 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] placeholder:text-[#3D2B1F]/30 focus:border-[#779599] focus:outline-none text-sm"
+              />
+            </div>
             <div>
               <label className="block text-xs text-[#3D2B1F]/60 mb-1 font-medium">رقم الواتساب</label>
               <input
@@ -358,6 +410,53 @@ export default function Dashboard() {
                 value={settings.instagram_boxes}
                 onChange={e => setSettings(s => ({...s, instagram_boxes: e.target.value}))}
                 dir="ltr"
+                className="w-full px-3 py-2 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] placeholder:text-[#3D2B1F]/30 focus:border-[#779599] focus:outline-none text-sm"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-xs text-[#3D2B1F]/60 mb-1 font-medium">نص الهيرو (الرئيسية)</label>
+              <input
+                placeholder="أفخر أنواع الشوكولاتة المصنوعة يدوياً بحب"
+                value={settings.hero_tagline}
+                onChange={e => setSettings(s => ({...s, hero_tagline: e.target.value}))}
+                className="w-full px-3 py-2 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] placeholder:text-[#3D2B1F]/30 focus:border-[#779599] focus:outline-none text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-[#3D2B1F]/60 mb-1 font-medium">نص فوتر</label>
+              <input
+                placeholder="شوكولاتة مصنوعة بحب في الجبيل"
+                value={settings.footer_tagline}
+                onChange={e => setSettings(s => ({...s, footer_tagline: e.target.value}))}
+                className="w-full px-3 py-2 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] placeholder:text-[#3D2B1F]/30 focus:border-[#779599] focus:outline-none text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-[#3D2B1F]/60 mb-1 font-medium">نص حقوق النشر</label>
+              <input
+                placeholder="© 2025 Cozy Chocolate. جميع الحقوق محفوظة"
+                value={settings.footer_copyright}
+                onChange={e => setSettings(s => ({...s, footer_copyright: e.target.value}))}
+                className="w-full px-3 py-2 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] placeholder:text-[#3D2B1F]/30 focus:border-[#779599] focus:outline-none text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-[#3D2B1F]/60 mb-1 font-medium">وصف قسم المناسبات</label>
+              <input
+                placeholder="شوكولاتة فاخرة لكل مناسبة تستحق التميّز"
+                value={settings.occasions_subtitle}
+                onChange={e => setSettings(s => ({...s, occasions_subtitle: e.target.value}))}
+                className="w-full px-3 py-2 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] placeholder:text-[#3D2B1F]/30 focus:border-[#779599] focus:outline-none text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-[#3D2B1F]/60 mb-1 font-medium">وصف قسم البوكسات</label>
+              <input
+                placeholder="بوكسات هدايا مصممة بعناية لمن تحب"
+                value={settings.boxes_subtitle}
+                onChange={e => setSettings(s => ({...s, boxes_subtitle: e.target.value}))}
                 className="w-full px-3 py-2 bg-white border border-[#779599]/40 rounded-xl text-[#3D2B1F] placeholder:text-[#3D2B1F]/30 focus:border-[#779599] focus:outline-none text-sm"
               />
             </div>
@@ -592,7 +691,7 @@ export default function Dashboard() {
               </div>
             )}
 
-            <div className="grid gap-4 px-4 py-2.5 text-[#3D2B1F]/50 text-xs font-semibold tracking-wide border-b-2 border-[#779599]/20" style={{gridTemplateColumns:'1fr 70px 70px 100px 100px 80px', background:'rgba(119,149,153,0.06)'}}>
+            <div className="hidden md:grid gap-4 px-4 py-2.5 text-[#3D2B1F]/50 text-xs font-semibold tracking-wide border-b-2 border-[#779599]/20" style={{gridTemplateColumns:'1fr 70px 70px 100px 100px 80px', background:'rgba(119,149,153,0.06)'}}>
               <span>المنتج</span><span>👁 مشاهدة</span><span>❤️ إعجاب</span><span>السعر</span><span>الحالة</span><span></span>
             </div>
 
@@ -603,71 +702,72 @@ export default function Dashboard() {
               onDragStart={() => handleDragStart(index, cat)}
               onDragOver={(e) => handleDragOver(e, index, cat)}
               onDragEnd={() => handleDragEnd(cat)}
-              className={`grid gap-4 p-4 items-center border-b border-[#779599]/20 transition-colors cursor-grab active:cursor-grabbing ${
+              className={`border-b border-[#779599]/20 transition-colors cursor-grab active:cursor-grabbing ${
                 dragIndex === index && dragCategory === cat ? 'bg-[#779599]/20 opacity-50' : 'hover:bg-[#779599]/10'
               }`}
-              style={{gridTemplateColumns:'1fr 70px 70px 100px 100px 80px'}}
             >
-              <div className="flex items-center gap-3">
-                <GripVertical size={16} className="text-[#3D2B1F]/30" />
-                <div>
-                  <p className="text-[#3D2B1F] text-sm font-medium">{product.name_ar}</p>
-                  {product.name && <p className="text-[#3D2B1F]/40 text-xs">{product.name}</p>}
+              {/* Mobile layout */}
+              <div className="md:hidden p-3 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <GripVertical size={16} className="text-[#3D2B1F]/30 flex-shrink-0" />
+                  <p className="text-[#3D2B1F] text-sm font-medium flex-1">{product.name_ar}</p>
+                  <button onClick={() => toggleActive(product)}
+                    className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg font-semibold ${
+                      product.is_active ? 'bg-green-500 text-white' : 'bg-red-400 text-white'
+                    }`}>
+                    {product.is_active ? <Eye size={12} /> : <EyeOff size={12} />}
+                    {product.is_active ? 'ظاهر' : 'مخفي'}
+                  </button>
+                </div>
+                <div className="flex items-center gap-3 pr-6">
+                  {editingId === product.id ? (
+                    <input type="number" defaultValue={product.price}
+                      onBlur={e => { updateProduct(product.id, { price: Number(e.target.value) }); setEditingId(null) }}
+                      onKeyDown={e => { if (e.key === 'Enter') { updateProduct(product.id, { price: Number((e.target as HTMLInputElement).value) }); setEditingId(null) } }}
+                      className="w-20 px-2 py-1 bg-white border border-[#779599] rounded text-[#3D2B1F] focus:outline-none text-sm" autoFocus />
+                  ) : (
+                    <span onClick={() => setEditingId(product.id)} className="text-[#D4AF37] text-sm font-bold cursor-pointer">{product.price} ر.س</span>
+                  )}
+                  <span className="text-[#3D2B1F]/40 text-xs">👁 {product.views ?? 0}</span>
+                  <span className="text-[#3D2B1F]/40 text-xs">❤️ {product.likes ?? 0}</span>
+                  <div className="flex gap-1 mr-auto">
+                    <button onClick={() => setEditingProduct(product)} className="p-1.5 text-[#779599] hover:bg-[#779599]/10 rounded-lg"><Pencil size={15} /></button>
+                    <button onClick={() => setConfirmDelete(product.id)} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg"><Trash2 size={15} /></button>
+                  </div>
                 </div>
               </div>
-              <span className="text-[#3D2B1F]/60 text-sm font-medium">{product.views ?? 0}</span>
-              <span className="text-[#3D2B1F]/60 text-sm font-medium">{product.likes ?? 0}</span>
-              <div>
-                {editingId === product.id ? (
-                  <input
-                    type="number"
-                    defaultValue={product.price}
-                    onBlur={(e) => {
-                      updateProduct(product.id, { price: Number(e.target.value) })
-                      setEditingId(null)
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        updateProduct(product.id, { price: Number((e.target as HTMLInputElement).value) })
-                        setEditingId(null)
-                      }
-                    }}
-                    className="w-20 px-2 py-1 bg-white border border-[#779599] rounded text-[#3D2B1F] focus:outline-none"
-                    autoFocus
-                  />
-                ) : (
-                  <span
-                    onClick={() => setEditingId(product.id)}
-                    className="text-[#D4AF37] cursor-pointer hover:text-[#C5A55A]"
-                  >
-                    {product.price} ر.س
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => toggleActive(product)}
-                className={`flex items-center gap-1 text-sm px-3 py-1 rounded-lg font-semibold transition-colors ${
-                  product.is_active
-                    ? 'bg-green-500 text-white hover:bg-green-600'
-                    : 'bg-red-400 text-white hover:bg-red-500'
-                }`}
-              >
-                {product.is_active ? <Eye size={14} /> : <EyeOff size={14} />}
-                {product.is_active ? 'ظاهر' : 'مخفي'}
-              </button>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setEditingProduct(product)}
-                  className="p-2 text-[#779599] hover:bg-[#779599]/10 rounded-lg transition-colors"
-                >
-                  <Pencil size={16} />
+              {/* Desktop layout */}
+              <div className="hidden md:grid gap-4 p-4 items-center" style={{gridTemplateColumns:'1fr 70px 70px 100px 100px 80px'}}>
+                <div className="flex items-center gap-3">
+                  <GripVertical size={16} className="text-[#3D2B1F]/30" />
+                  <div>
+                    <p className="text-[#3D2B1F] text-sm font-medium">{product.name_ar}</p>
+                    {product.name && <p className="text-[#3D2B1F]/40 text-xs">{product.name}</p>}
+                  </div>
+                </div>
+                <span className="text-[#3D2B1F]/60 text-sm">{product.views ?? 0}</span>
+                <span className="text-[#3D2B1F]/60 text-sm">{product.likes ?? 0}</span>
+                <div>
+                  {editingId === product.id ? (
+                    <input type="number" defaultValue={product.price}
+                      onBlur={e => { updateProduct(product.id, { price: Number(e.target.value) }); setEditingId(null) }}
+                      onKeyDown={e => { if (e.key === 'Enter') { updateProduct(product.id, { price: Number((e.target as HTMLInputElement).value) }); setEditingId(null) } }}
+                      className="w-20 px-2 py-1 bg-white border border-[#779599] rounded text-[#3D2B1F] focus:outline-none" autoFocus />
+                  ) : (
+                    <span onClick={() => setEditingId(product.id)} className="text-[#D4AF37] cursor-pointer hover:text-[#C5A55A]">{product.price} ر.س</span>
+                  )}
+                </div>
+                <button onClick={() => toggleActive(product)}
+                  className={`flex items-center gap-1 text-sm px-3 py-1 rounded-lg font-semibold transition-colors ${
+                    product.is_active ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-red-400 text-white hover:bg-red-500'
+                  }`}>
+                  {product.is_active ? <Eye size={14} /> : <EyeOff size={14} />}
+                  {product.is_active ? 'ظاهر' : 'مخفي'}
                 </button>
-                <button
-                  onClick={() => setConfirmDelete(product.id)}
-                  className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => setEditingProduct(product)} className="p-2 text-[#779599] hover:bg-[#779599]/10 rounded-lg"><Pencil size={16} /></button>
+                  <button onClick={() => setConfirmDelete(product.id)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"><Trash2 size={16} /></button>
+                </div>
               </div>
             </div>
           ))}
@@ -787,6 +887,53 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      {/* Works Panel */}
+      <div className="rounded-2xl mb-6 overflow-hidden" style={{background:'rgba(255,255,255,0.92)', backdropFilter:'blur(12px)', border:'2px solid rgba(119,149,153,0.55)', boxShadow:'0 4px 20px rgba(61,43,31,0.1)'}}>
+        <div className="flex items-center justify-between px-6 py-4 border-b-2 border-[#779599]/40">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#779599]/15 flex items-center justify-center text-lg">🎨</div>
+            <div>
+              <h2 className="font-bold text-[#3D2B1F]">أعمالنا</h2>
+              <p className="text-xs text-[#779599]">صور وفيديوهات</p>
+            </div>
+            <span className="text-xs text-[#779599] bg-[#779599]/15 px-2 py-0.5 rounded-full font-medium">{works.length}</span>
+          </div>
+          <label className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${uploadingWork ? 'bg-[#779599]/20 text-[#779599]' : 'bg-[#779599]/15 text-[#779599] hover:bg-[#779599]/25'}`}>
+            <Upload size={16} />
+            {uploadingWork ? 'جاري الرفع...' : 'رفع صورة/فيديو'}
+            <input type="file" accept="image/*,video/*" multiple className="hidden" disabled={uploadingWork} onChange={async (e) => {
+              const files = Array.from(e.target.files || [])
+              for (const f of files) await uploadWork(f)
+              e.target.value = ''
+            }} />
+          </label>
+        </div>
+        {works.length === 0 ? (
+          <div className="py-12 text-center text-[#779599]/60 text-sm">لا توجد أعمال — ارفع صور أو فيديوهات</div>
+        ) : (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 p-4">
+            {works.map(w => (
+              <div key={w.id} className="relative group rounded-xl overflow-hidden aspect-square" style={{border:'1.5px solid rgba(119,149,153,0.3)'}}>
+                {w.type === 'video'
+                  ? <video src={w.url} className="w-full h-full object-cover" muted />
+                  : <img src={w.url} alt="" className="w-full h-full object-cover" />
+                }
+                {w.type === 'video' && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <span className="text-white text-xl">▶</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => deleteWork(w.id)}
+                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

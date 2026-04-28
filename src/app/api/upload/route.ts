@@ -29,10 +29,11 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await supabase.storage
     .from('products')
-    .upload(fileName, file)
+    .upload(fileName, file, { upsert: true })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('Upload error:', error)
+    return NextResponse.json({ error: error.message, details: JSON.stringify(error) }, { status: 500 })
   }
 
   const { data: { publicUrl } } = supabase.storage

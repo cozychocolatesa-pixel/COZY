@@ -6,10 +6,21 @@ import SmoothScroll from '@/components/SmoothScroll'
 import HeroSection from '@/components/HeroSection'
 import MenuSection from '@/components/MenuSection'
 import Footer from '@/components/Footer'
+import WorksSection from '@/components/WorksSection'
 
 export default function Home() {
   const [occasions, setOccasions] = useState<Product[]>([])
   const [boxes, setBoxes] = useState<Product[]>([])
+  const [siteSettings, setSiteSettings] = useState({ occasions_subtitle: 'شوكولاتة فاخرة لكل مناسبة تستحق التميّز', boxes_subtitle: 'بوكسات هدايا مصممة بعناية لمن تحب' })
+
+  useEffect(() => {
+    fetch('/api/settings').then(r => r.json()).then(d => {
+      setSiteSettings({
+        occasions_subtitle: d.occasions_subtitle || 'شوكولاتة فاخرة لكل مناسبة تستحق التميّز',
+        boxes_subtitle: d.boxes_subtitle || 'بوكسات هدايا مصممة بعناية لمن تحب',
+      })
+    }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     async function fetchProducts() {
@@ -35,15 +46,17 @@ export default function Home() {
         <MenuSection
           id="occasions"
           title="منيو المناسبات"
-          subtitle="شوكولاتة فاخرة لكل مناسبة تستحق التميّز"
+          subtitle={siteSettings.occasions_subtitle}
           products={occasions}
         />
         <MenuSection
           id="boxes"
           title="منيو البوكسات"
-          subtitle="بوكسات هدايا مصممة بعناية لمن تحب"
+          subtitle={siteSettings.boxes_subtitle}
           products={boxes}
+          accentColor="pink"
         />
+        <WorksSection />
         <Footer />
       </main>
     </SmoothScroll>

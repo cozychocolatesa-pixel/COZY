@@ -49,6 +49,13 @@ body {
   -webkit-text-fill-color: #F5F0EB;
 }
 
+.pink-gradient {
+  background: linear-gradient(135deg, #F0A8A5 0%, #e8928a 50%, #f5c4c1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .sage-gradient {
   background: linear-gradient(135deg, #5B7B6F 0%, #7a9a88 50%, #4a6459 100%);
 }

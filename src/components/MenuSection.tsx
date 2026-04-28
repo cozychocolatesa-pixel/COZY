@@ -15,9 +15,10 @@ interface MenuSectionProps {
   title: string
   subtitle: string
   products: Product[]
+  accentColor?: 'gold' | 'pink'
 }
 
-export default function MenuSection({ id, title, subtitle, products }: MenuSectionProps) {
+export default function MenuSection({ id, title, subtitle, products, accentColor = 'gold' }: MenuSectionProps) {
   const sectionRef = useRef<HTMLElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
   const [selected, setSelected] = useState<Product | null>(null)
@@ -125,7 +126,7 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
     <div
       key={product.id}
       onClick={() => openProduct(product)}
-      className="product-card group cursor-pointer flex flex-col items-center gap-3"
+      className="product-card group cursor-pointer flex flex-col items-center gap-3 w-[calc(50%-12px)] sm:w-[calc(25%-18px)]"
     >
       <div
         className="relative overflow-hidden rounded-full shadow-lg w-28 h-28 sm:w-32 sm:h-32"
@@ -162,7 +163,7 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
 
         if (subs.length === 0) {
           return (
-            <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-6 md:gap-10">
+            <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-6 px-4">
               {products.map(p => renderCard(p))}
             </div>
           )
@@ -200,7 +201,7 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
                     ref={el => { contentRefs.current[sub.id] = el }}
                     style={{ height: 0, overflow: 'hidden' }}
                   >
-                    <div className="py-8 flex flex-wrap justify-center gap-6 md:gap-10" style={{ perspective: '800px' }}>
+                    <div className="py-8 flex flex-wrap justify-center gap-6 px-4" style={{ perspective: '800px' }}>
                       {subProducts.map(p => renderCard(p))}
                       {subProducts.length === 0 && (
                         <p className="text-brand-cream/30 text-sm py-4">قريباً...</p>
