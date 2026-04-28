@@ -27,35 +27,35 @@ export default function Footer() {
         <div className="flex flex-wrap gap-x-6 gap-y-4 justify-center items-center">
           {s.whatsapp && (
             <a href={`https://wa.me/${s.whatsapp}`} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-[#F5F0EB] hover:text-white transition-colors duration-300">
+              className="flex items-center gap-2 text-[#F5F0EB] hover:text-white transition-colors duration-300 whitespace-nowrap">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d={waPath}/></svg>
               <span className="text-sm">واتساب</span>
             </a>
           )}
           {s.instagram_boxes && (
             <a href={s.instagram_boxes} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-[#F5F0EB] hover:text-white transition-colors duration-300">
+              className="flex items-center gap-2 text-[#F5F0EB] hover:text-white transition-colors duration-300 whitespace-nowrap">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d={igPath}/></svg>
               <span className="text-sm">بوكسات</span>
             </a>
           )}
           {s.instagram_occasions && (
             <a href={s.instagram_occasions} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-[#F5F0EB] hover:text-white transition-colors duration-300">
+              className="flex items-center gap-2 text-[#F5F0EB] hover:text-white transition-colors duration-300 whitespace-nowrap">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d={igPath}/></svg>
               <span className="text-sm">مناسبات</span>
             </a>
           )}
           {s.order_link && (
             <a href={s.order_link} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-[#F5F0EB] hover:text-white transition-colors duration-300">
+              className="flex items-center gap-2 text-[#F5F0EB] hover:text-white transition-colors duration-300 whitespace-nowrap">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
               <span className="text-sm">اطلب الآن</span>
             </a>
           )}
           {s.store_website && (
             <a href={s.store_website} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-[#F5F0EB] hover:text-white transition-colors duration-300">
+              className="flex items-center gap-2 text-[#F5F0EB] hover:text-white transition-colors duration-300 whitespace-nowrap">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
               <span className="text-sm">موقعنا</span>
             </a>
