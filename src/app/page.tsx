@@ -54,7 +54,6 @@ export default function Home() {
           title="منيو البوكسات"
           subtitle={siteSettings.boxes_subtitle}
           products={boxes}
-          accentColor="pink"
         />
         <WorksSection />
         <Footer />

@@ -15,10 +15,9 @@ interface MenuSectionProps {
   title: string
   subtitle: string
   products: Product[]
-  accentColor?: 'gold' | 'pink'
 }
 
-export default function MenuSection({ id, title, subtitle, products, accentColor = 'gold' }: MenuSectionProps) {
+export default function MenuSection({ id, title, subtitle, products }: MenuSectionProps) {
   const sectionRef = useRef<HTMLElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
   const [selected, setSelected] = useState<Product | null>(null)
