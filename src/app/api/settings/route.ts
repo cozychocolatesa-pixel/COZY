@@ -36,11 +36,14 @@ export async function PUT(request: NextRequest) {
 
   const body: Record<string, string> = await request.json()
 
-  await Promise.all(
+  const results = await Promise.all(
     Object.entries(body).map(([key, value]) =>
-      supabase.from('settings').upsert({ key, value })
+      supabase.from('settings').upsert({ key, value }, { onConflict: 'key' })
     )
   )
 
-  return NextResponse.json({ success: true })
+  const errors = results.filter(r => r.error).map(r => r.error?.message)
+  if (errors.length) console.error('Settings upsert errors:', errors)
+
+  return NextResponse.json({ success: true, errors })
 }
