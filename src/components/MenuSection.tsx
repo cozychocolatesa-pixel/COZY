@@ -125,7 +125,7 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
     <div
       key={product.id}
       onClick={() => openProduct(product)}
-      className="product-card group cursor-pointer flex flex-col items-center gap-3 w-[calc(50%-12px)] sm:w-[calc(25%-18px)]"
+      className="product-card group cursor-pointer flex flex-col items-center gap-3 w-[calc(33.333%-16px)] sm:w-[calc(25%-18px)]"
     >
       <div
         className="relative overflow-hidden rounded-full shadow-lg w-28 h-28 sm:w-32 sm:h-32"
