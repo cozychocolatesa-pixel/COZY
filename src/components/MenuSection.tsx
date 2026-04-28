@@ -264,7 +264,7 @@ export default function MenuSection({ id, title, subtitle, products }: MenuSecti
                 {selected.category === 'occasions' ? 'مناسبات' : 'بوكسات'}
               </span>
 
-              <h2 className="text-xl md:text-2xl font-bold text-white leading-snug">{selected.name_ar}</h2>
+              <h2 className="text-xl md:text-2xl font-bold text-white leading-snug pr-8 md:pr-0 break-words">{selected.name_ar}</h2>
               {selected.name && <p className="text-sage-400 text-sm tracking-widest -mt-2">{selected.name}</p>}
 
               <div className="w-12 h-px bg-gold-500/40" />
